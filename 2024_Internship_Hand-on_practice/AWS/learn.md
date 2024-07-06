@@ -75,21 +75,32 @@ others: [Why does a AWS NAT Gateway require an ElasticIP?](https://stackoverflow
 - Build a connection tunnel between two different VPC
 
 
-# Using CloudWatch and SNS Services to Monitor Your Website
+# 6. Using CloudWatch and SNS Services to Monitor Your Website
+In this lab, we learn how to create a alarm for checking the status of EC2 instance's CPU usage. When the usage is over a value, the alarm will notify us through the email.
 
+![](img/img15.png)
 ## learn 
 - How to design your threshold metrics with CloudWatch.
 - Create an Amazon Linux Instance from an Amazon Machine Image (AMI).
 - Monitor service states and send SNS when alarm.
 
-# CloudWatch Alarms for CloudTrail Events
+# 7. CloudWatch Alarms for CloudTrail Events
+In this lab, we create a alarm for checking the status of the S3 bucket. When adding a new content to S3 bucket, the alarm will notify us through the email.
+
+![](img/img13.png)
 
 ## learn
 - How to Trail to record the Event.
 - How to Create Alarm CloudWatch.
 - How to Send Nofication by SNS.
 
-# Get Started with AWS WAF
+
+# 8. Build an Elastic and Low Latency Architecture on the Cloud
+
+## learn 
+
+
+# 10. Get Started with AWS WAF
 AWS WAF is a firewall to protect our web application. The method of protecting by firewall is to block IPs in the black list. In this practice, we need to create a black list for our web and test how it works. The architecture like below.
 
 ![](img/img8.png)

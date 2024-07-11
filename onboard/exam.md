@@ -14,6 +14,7 @@
 
 > Amazon DynamoDB can automatically replicate data across multiple AWS regions. It also provides fast, local read and write performance for globally distributed applications.
 > 
+> RDS Multi-AZ provides high availability within a single region but doesn't natively support global scalability.
 
 
 # Q4 4. A tech company has a CRM application hosted on an Auto Scaling group of On-Demand EC2 instances. The application is extensively used during office hours from 8 in the morning till 6 in the afternoon. Their users are complaining that the performance of the application is slow during the start of the day but then works normally after a couple of hours. Which of the following can be done to ensure that the application works properly at the beginning of the day?

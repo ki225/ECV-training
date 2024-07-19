@@ -70,6 +70,7 @@ Unresolved Challenges:
 # 2024/7/15
 Tasks:
 - build level1 AWS architecture with Terraform
+
 Lessons Learned:
 - How to set environment variable in PowerShell without permissions.
 - Set the environment to run Terraform
@@ -78,8 +79,10 @@ Lessons Learned:
 # 2024/7/17
 Tasks:
 - complete level1 AWS architecture through the AWS console
+
 Lessons Learned:
 - Switching role, connect ec2, building rds, ...
+
 Unresolved Challenges:
 - how to make ec2 connect to RDS
 - setting SSM agent
@@ -89,6 +92,7 @@ Unresolved Challenges:
 # 2024/7/18
 Tasks:
 - complete level1 AWS architecture through the AWS console
+
 Lessons Learned:
 - understanding  the reason of why changing IAM role cannot function right away
 - learn about IMDSv2 and its usage
@@ -97,6 +101,7 @@ Lessons Learned:
 - instance connection and SSM is for replacing  
 - remember to close the cookie when refreshing the website, so we can get the diff. ip
 - many commands
+
 Unresolved Challenges:
 - to organize all the knowledge I have learned
 - learn how to use ECS
@@ -106,10 +111,12 @@ Unresolved Challenges:
 Tasks:
 - complete level2 AWS architecture through the AWS console
 - fix the problem of webpage not found (just reboot)
+
 Lessons Learned:
 - Using CloudFront to connect EC2 instance
 - building docker with ECS AMI
 - docker commands
 - SQL injections
+
 Unresolved Challenges:
 - complete task 5 and task 6

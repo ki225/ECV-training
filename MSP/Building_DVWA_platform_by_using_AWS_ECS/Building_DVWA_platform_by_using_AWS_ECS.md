@@ -229,7 +229,6 @@ here is the successful result
 ```
 systemctl status docker
 ```
-![image](https://hackmd.io/_uploads/HJPu2IwdA.png)
 ![截圖 2024-07-19 晚上10.19.03](https://hackmd.io/_uploads/HyNyUguO0.png)
 
 

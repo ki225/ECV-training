@@ -4,7 +4,8 @@
 In this practice, there is a need for building an three tier architecture website with AWS. In order to implement reliability, we have to build ec2 in AZs and auto scaling group. In this article, I will keep notes for the problems I met. 
 
 ## Architecture
-![截圖 2024-07-19 清晨6.34.14](https://hackmd.io/_uploads/HkcdOMDuA.png)
+
+![截圖 2024-07-20 上午10.45.15](https://hackmd.io/_uploads/Hk8A4sOd0.png)
 
 ## function
 * Can see the Instance's private ip by access CloudFront's domain url
@@ -94,9 +95,8 @@ problem:
 ### Use ALB(app load balancer)
 Though ALB seems to connect to private EC2 in the architecture diagram from the beginning of the article, ALB should be mapping to public part(internet-facing). The following picture distinguish the difference between ALB and other LB.
 
-![1*YuG-jq-PGFfiHlsI7daA2w](https://hackmd.io/_uploads/Hy7aofPdR.png)
 
-
+![截圖 2024-07-20 上午10.45.43](https://hackmd.io/_uploads/Bk-bBjOOC.png)
 
 ### Use auto scaling group and launch template
 By using auto scaling group, instances will be generated automatically depends on the launch template. Remember to change the template version in auto scaling group after updating the template. 
@@ -321,7 +321,7 @@ EOF
 
 sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 ```
-![image](https://hackmd.io/_uploads/Hkkh13EdC.png)
+
 ---
 ## If Instance's CPU usage over 100% will received the notify email
 
@@ -342,9 +342,10 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-c
 > - set the lower requirement for auto generating instances might be clear
 > - should wait for a while due to the ec2 deployment 
 - [x] The website will still be worked after 1~2 instance(s) be terminated.
+- [x] instances are across two AZs: `10.0.2.x` and `10.0.5.x` 
 
-![image](https://hackmd.io/_uploads/Sy32TI8O0.png)
+![截圖 2024-07-20 上午10.46.45](https://hackmd.io/_uploads/SyumHs_OR.png)
 
-![image](https://hackmd.io/_uploads/BkbX08UuR.png)
-![image](https://hackmd.io/_uploads/S1mdCIIu0.png)
+![截圖 2024-07-20 上午10.46.53](https://hackmd.io/_uploads/B1hErodd0.png)
 
+![截圖 2024-07-20 上午10.47.14](https://hackmd.io/_uploads/S1hrBsudC.png)

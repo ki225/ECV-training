@@ -1,9 +1,8 @@
 #  Building DVWA platform by using AWS ECS
 > - start date: 2024/7/19
 
-:::warning
-This exercise is for learning purposes only.
-:::
+> [!WARNING]  
+>This exercise is for learning purposes only.
 
 ## Table of Contents
 1. Run Docker Container on EC2 Instance

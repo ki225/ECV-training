@@ -45,7 +45,7 @@ if you cannot deal with it by commands, you can just create a new one and edit t
 ### install Apache into instances by user data 
 user data is the part in `launch template > advanced details`
 
-```sh=
+```sh
 #!/bin/bash
 sudo yum update -y
 sudo yum install -y httpd
@@ -59,26 +59,26 @@ For using SSH, we need to use the key pair. Because we got the key pairs informa
 
 In Windows, the steps for it is more complicated:
 1. set variable `$PATH` as your key pair path or your key-pair name.
-    ```sh=
+    ```sh
     $PATH = "\<YOUR_KEY_PAIR_PATH>"
     ```
 2. reset the access control lists (ACLs) of a file or directory to the default values(e.g. permissions) inherited from its parent directory
-    ```sh=
+    ```sh
     icacls.exe $PATH /reset
     ```
 3. modify the access control list (ACL) of a file or directory specified by `$PATH` in Windows.
-    ```sh=
+    ```sh
     icacls.exe $PATH /GRANT:R "$($env:USERNAME):(R)"
     ```
 4. manage the inheritance settings of the access control list
-    ```sh=
+    ```sh
     icacls.exe $PATH /inheritance
     ```
 
 
 
 Then send key pairs through SSH copy. The first AWS host is bastion. The second one is instance in private subnet. Replace the `TARGETSENDING_FILE` with your key pair for ec2 in private subnet.
-```bash=
+```bash
 scp -i <BASTION_KEY_PAIR> <TARGETSENDING_FILE> ec2-user@<BASTION_PUBLIC_IP>:/home/ec2-user
 ```
 
@@ -107,7 +107,7 @@ By using auto scaling group, instances will be generated automatically depends o
 
 ## send log files into log group
 From the information bekow, we can know that the log file for Apache is in the same path as `HTTPD_ROOT+DEFAULT_ERRORLOG`
-```sh=
+```sh
 httpd -V
 ```
 
@@ -155,15 +155,15 @@ amazon-cloudwatch-agent  apitools  bin
 ```
 
 - We need to get logs from path `/var/log/access_log`, but our log file is actually at `/etc/httpd/logs/access_log`. Use the following command to make a file which point to the original one.
-    ```sh=
+    ```sh
     sudo ln -s /etc/httpd/logs/access_log /var/log/access_log
     ```
 - Edit the json file for setting cloudwatch-agent. We need cloudwatch-agent to send logs.
-    ```sh=
+    ```sh
     nano /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
     ```
 - Paste the following:
-    ```json=
+    ```json
     {
       "agent": {
         "run_as_user": "root"
@@ -194,13 +194,13 @@ amazon-cloudwatch-agent  apitools  bin
     }
     ```
 - Execute 
-    ```sh=
+    ```sh
     sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
     ```
 
 ### user data
 
-```sh=
+```sh
 #!/bin/bash
 
 sudo ln -s /etc/httpd/logs/access_log /var/log/access_log
@@ -240,7 +240,7 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-c
 ```
 ![截圖 2024-07-20 上午10.28.32](https://hackmd.io/_uploads/HJHbZjdOA.png)
 
-```sh=
+```sh
 # Optionally, set appropriate permissions
 chmod 644 /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 
@@ -250,7 +250,7 @@ systemctl restart amazon-cloudwatch-agent
 
   
 - For using the cloudwatch agent to create cloudwatch logs and send to group, we have to add more policies:
-    ```json=
+    ```json
     {
       "Version": "2012-10-17",
       "Statement": [
@@ -270,7 +270,7 @@ systemctl restart amazon-cloudwatch-agent
     ```
 ---
 ## final user data
-```sh=
+```sh
 #!/bin/bash
 sudo yum update -y
 sudo yum install -y httpd
@@ -326,7 +326,7 @@ sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-c
 ## If Instance's CPU usage over 100% will received the notify email
 
 - command for testing
-    ``` sh=
+    ``` sh
     $(for i in `seq 1 $(cat /proc/cpuinfo |grep "physical id" |wc -l)`;do dd if=/dev/zero of=/dev/null & done)
     ```
     - this command is running in background. 

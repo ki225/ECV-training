@@ -14,10 +14,13 @@ resource "aws_lb_target_group" "main" {
   vpc_id   = aws_vpc.kiki-VPC.id
 
   health_check {
-    path                = "/"
+    path                = "/health-check"
+    interval            = 30
+    timeout             = 5
     healthy_threshold   = 2
     unhealthy_threshold = 10
   }
+  target_type = "instance"
 }
 
 # ALB Listener
@@ -36,6 +39,6 @@ resource "aws_lb_listener" "front_end" {
 resource "aws_lb_target_group_attachment" "main" {
   count            = 2
   target_group_arn = aws_lb_target_group.main.arn
-  target_id        = aws_ecs_service.main.id
+  target_id        = aws_instance.ecs_instance.id
   port             = 80
 }

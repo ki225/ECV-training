@@ -120,3 +120,81 @@ Lessons Learned:
 
 Unresolved Challenges:
 - complete task 5 and task 6
+
+# 2024/7/22
+Tasks:
+- complete level2 AWS architecture through the AWS console
+
+Lessons Learned:
+- Concept of CSRF
+- SQL injections commands and some database knowledge
+
+Unresolved Challenges:
+- learn some security knowledge like CSRF, XSS
+- complete level2 AWS architecture with Terraform
+- modify data in database
+- learn setting custom WAF by using regex
+
+# 2024/7/23
+Tasks:
+- write a document for understanding the differences between Git Flow, GitHub Flow, GitLab Flow.
+- try to build level 2 implementation by Terraform
+- use Cloud9 to solve the laptop permission problems
+
+Lessons Learned:
+- Terraform
+
+Unresolved Challenges:
+- complete level 2 implementation by Terraform
+
+# 2024/7/29
+
+Tasks:
+- building DVWA with Terraform
+- upload files to GitLab through commands
+- download Git in Windows OS
+- try to fix error
+    ```
+    Planning failed. Terraform encountered an error while generating this plan.
+
+    ╷
+    │ Error: Retrieving AWS account details: validating provider credentials: retrieving caller identity from STS: operation error STS: GetCallerIdentity, https response error StatusCode: 403, RequestID: 49e00923-f52c-443b-af3d-4a4431403a3b, api error InvalidClientTokenId: The security token included in the request is invalid.
+    │ 
+    │   with provider["registry.terraform.io/hashicorp/aws"],
+    │   on main.tf line 1, in provider "aws":
+    │    1: provider "aws" {
+
+    │ Error: creating IAM Role (ecs_task_execution_role): operation error IAM: CreateRole, https response error StatusCode: 403, RequestID: 7102428a-8b69-45d8-8e04-51fc7b9e2f8f, api error InvalidClientTokenId: The security token included in the request is invalid
+    │ 
+    │   with aws_iam_role.ecs_task_execution,
+    │   on main.tf line 219, in resource "aws_iam_role" "ecs_task_execution":
+    │  219: resource "aws_iam_role" "ecs_task_execution" {
+    │ 
+    ```
+- discuss the problem with our mentor
+- explain how we solve to Addi and Markus
+
+Lessons Learned:
+- Terraform
+- credential priority
+- credential store
+
+# 2024/7/30
+Tasks:
+- Build and design POST/GET RESTful API
+- connect API and EC2 instance
+Lessons Learned:
+- RESTful API
+- VPC link
+Unresolved Challenges:
+- 前端和後端都會放在同一台EC2嗎
+- 如果放在一起的話，使用api gateway 的意義為何
+- 找讓架構更安全的方法
+    - https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-control-access-aws-waf.html
+    https://docs.aws.amazon.com/zh_tw/apigateway/latest/developerguide/apigateway-custom-domain-tls-version.html
+    https://docs.aws.amazon.com/zh_tw/network-firewall/latest/developerguide/what-is-aws-network-firewall.html
+
+
+# 2024/7/31
+Problem solved
+- [Task solving records](https://hackmd.io/@okii77/S1pHqTHKC)

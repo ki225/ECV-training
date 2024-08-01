@@ -33,3 +33,12 @@ output "security_group_name" {
 output "instance_public_ip" {
   value = data.aws_instance.flask-server.public_ip
 }
+
+
+output "api_url_for_ip-blocks" {
+  value = "https://${aws_api_gateway_rest_api.example.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/${aws_api_gateway_stage.example.stage_name}/v1/waf/ip-blocks"
+}
+
+output "api_url_for_rules" {
+  value = "https://${aws_api_gateway_rest_api.example.id}.execute-api.${data.aws_region.current.name}.amazonaws.com/${aws_api_gateway_stage.example.stage_name}/v1/waf/rules"
+}

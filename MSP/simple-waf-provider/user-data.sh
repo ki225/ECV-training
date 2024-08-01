@@ -1,3 +1,16 @@
+#!/bin/bash
+sudo systemctl start amazon-ssm-agent
+sudo yum update -y
+sudo yum install python3 python3-pip -y
+
+cd /home
+python3 -m venv flask_env
+source flask_env/bin/activate
+pip install flask
+mkdir flask_app
+cd flask_app
+
+cat <<EOF > app.py
 from flask import Flask, request, jsonify
 from datetime import datetime
 
@@ -12,7 +25,6 @@ last_updated = datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
 
 @app.route('/v1/waf/rules', methods=['GET', 'POST'])
 def rule_ip():
-    global last_updated
     if request.method == 'POST':
         new_data = request.json
         if new_data:
@@ -34,6 +46,7 @@ def rule_ip():
 
 @app.route('/v1/waf/ip-blocks', methods=['GET', 'POST'])
 def block_ip():
+    global last_updated
     if request.method == 'POST':
         new_data = request.json
         if new_data and "ip" in new_data and "reason" in new_data:
@@ -92,3 +105,8 @@ def block_ip():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
+EOF
+
+# run in background
+python app.py & 

@@ -196,5 +196,16 @@ Unresolved Challenges:
 
 
 # 2024/7/31
+Tasks:
+- MSP Intern task 1&2
+- solve many problems XD
+
+Lessons Learned:
+- API gateway
+- proxy
+
+Unresolved Challenges:
+- Complete task by using Terraform
+
 Problem solved
 - [Task solving records](https://hackmd.io/@okii77/S1pHqTHKC)

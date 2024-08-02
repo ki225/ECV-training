@@ -1,3 +1,5 @@
+# Only inckudes Get and Post method
+
 from flask import Flask, request, jsonify
 from datetime import datetime
 

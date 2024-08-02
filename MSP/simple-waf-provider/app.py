@@ -83,7 +83,7 @@ def block_ip():
             }), 200
         else:
             return jsonify({
-                "status": "success",
+                "status": "error",
                 "data": {
                     "messages": "Failed to retrieve IP block list"
                 }

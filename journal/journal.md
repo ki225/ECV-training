@@ -209,3 +209,72 @@ Unresolved Challenges:
 
 Problem solved
 - [Task solving records](https://hackmd.io/@okii77/S1pHqTHKC)
+
+
+# 2024/8/1
+Tasks:
+- Build waf-manager by using Terraform
+- Build S3 by terraform 
+
+Lessons Learned:
+- How to use Terraform build api gateway
+
+Unresolved Challenges:
+- check S3 creation with CloudTrail
+
+Problem Solve
+- Q: Error "The REST API doesn't contain any methods" was found when running Terraform file.
+    ```
+    │ Error: creating API Gateway Deployment: operation error API Gateway: CreateDeployment, https response error StatusCode: 400, RequestID: 2315e9cf-2586-4b17-abd6-a85fd3b67aaf, BadRequestException: The REST API doesn't contain any methods
+    │ 
+    │   with aws_api_gateway_deployment.deployment,
+    │   on main.tf line 134, in resource "aws_api_gateway_deployment" "deployment":
+    │  134: resource "aws_api_gateway_deployment" "deployment" {
+    │ 
+
+    ╷
+    │ Error: putting API Gateway Integration Response: operation error API Gateway: PutIntegrationResponse, https response error StatusCode: 404, RequestID: 6c0e1d05-7bb8-4427-ba88-6abe9236599e, NotFoundException: Invalid Integration identifier specified
+    │ 
+    │   with aws_api_gateway_integration_response.get_ip_blocks_integration_response,
+    │   on main.tf line 128, in resource "aws_api_gateway_integration_response" "get_ip_blocks_integration_response":
+    │  128: resource "aws_api_gateway_integration_response" "get_ip_blocks_integration_response" {
+    │ 
+    ╵
+
+    ╷
+    │ Error: creating API Gateway Deployment: operation error API Gateway: CreateDeployment, https response error StatusCode: 400, RequestID: aa659100-a6f0-4441-b889-47354c7e0b67, BadRequestException: No integration defined for method
+    │ 
+    │   with aws_api_gateway_deployment.deployment2,
+    │   on main.tf line 268, in resource "aws_api_gateway_deployment" "deployment2":
+    │  268: resource "aws_api_gateway_deployment" "deployment2" {
+    │ 
+    ```
+    - A: We should add parameter depends_on, so that the resource will be executed after the target resources are built. (Like topo sort ?_?)
+    - REF:
+        - https://stackoverflow.com/questions/61027229/error-creating-api-gateway-integration-response-notfoundexception-invalid-inte
+        - https://github.com/hashicorp/terraform-provider-aws/issues/4001
+
+
+# 2024/8/2
+Tasks:
+- task3: check S3 creation with CloudTrail
+- get credential by usingiam role 
+- assume role for creating bucket
+
+Lessons Learned:
+- API key
+- how important writing document is
+
+Unresolved Challenges:
+- write document
+- find credential
+
+# 2024/8/5
+Tasks:
+- finish [task3 notes](https://hackmd.io/@okii77/S1CFb3_YA)
+- complete API document for task1&2
+
+Lessons Learned:
+- IAM role & trust policy
+- how important writing document is
+Unresolved Challenges:

@@ -273,8 +273,11 @@ Unresolved Challenges:
 Tasks:
 - finish [task3 notes](https://hackmd.io/@okii77/S1CFb3_YA)
 - complete API document for task1&2
+- design final project architecture
+- find CVE payload
 
 Lessons Learned:
 - IAM role & trust policy
 - how important writing document is
 Unresolved Challenges:
+

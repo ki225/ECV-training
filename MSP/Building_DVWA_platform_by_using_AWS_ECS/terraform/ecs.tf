@@ -71,6 +71,7 @@ resource "aws_instance" "ecs_instance" {
   # 安裝 ECS agent
   user_data = <<-EOF
                 #!/bin/bash
+                systemctl start amazon-ssm-agent
                 sudo apt-get update -y
                 sudo apt-get upgrade -y
                 sudo docker pull vulnerables/web-dvwa

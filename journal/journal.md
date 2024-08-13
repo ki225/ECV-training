@@ -275,6 +275,7 @@ Tasks:
 - complete API document for task1&2
 - design final project architecture
 - find CVE payload
+    - [PayloadsAllTheThings](https://github.com/swisskyrepo/PayloadsAllTheThings/tree/master/CVE%20Exploits)
 
 Lessons Learned:
 - IAM role & trust policy

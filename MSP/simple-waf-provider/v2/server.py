@@ -17,8 +17,6 @@ def match_regex(string, pattern):
 def health_check():
     return jsonify({"message": "healthy", "status": "success"}), 200
 
-
-
 # PUT
 @server.route('/v1/waf/rules', methods=['PUT'])
 def update_rules():

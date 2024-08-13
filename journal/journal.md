@@ -282,3 +282,79 @@ Lessons Learned:
 - how important writing document is
 Unresolved Challenges:
 
+# 2024/8/6
+Tasks:
+- ACloudGURU LAB
+- Using Secrets Manager to Authenticate with an RDS Database Using Lambda
+- Triggering AWS Lambda from Amazon SQS
+- Standing Up an Amazon Aurora Database with an Automatically Rotated Password Using AWS Secrets Manager
+- Build webpage for testing 
+
+Lessons Learned:
+- secret manager
+
+Unresolved Challenges:
+- use regex for blocking the remain attacks
+- Nginx website
+- sqlmap
+
+# 2024/8/7
+Tasks:
+- Find Nginx vulnerabilities
+- Design the whole architecture of  fp
+
+Unresolved Challenges:
+- Design the architecture
+- Test REGEX for some NGINX vulnerabilities 
+
+# 2024/8/8
+Tasks:
+- Design FP architecture and diagram
+- find nginx vulnerability
+    - https://reversebrain.github.io/2021/03/29/The-story-of-Nginx-and-uri-variable/
+
+Unresolved Challenges:
+- Test REGEX for some NGINX vulnerabilities 
+
+# 2024/8/9
+Tasks:
+- find nginx vulnerability
+    - note: https://hackmd.io/@okii77/rJxhuIeQ9C
+
+Unresolved Challenges:
+- Test REGEX for some NGINX vulnerabilities 
+
+
+# 2024/8/12
+Tasks:
+- nginx vulnerability PoC
+- finding other vulnerabilities
+
+Lessons Learned:
+- Nginx-ingress
+- K3S
+
+Unresolved Challenges:
+- Test REGEX for some NGINX vulnerabilities 
+
+To-do list
+- waf architecture in private subnet
+- keep notes
+
+# 2024/8/13
+Tasks:
+- Build architecture: S3 website send API request into server in private subnet
+- Build in console
+
+Lessons Learned:
+- VPC endpoint
+- NLB
+- VPC link
+- presentation
+
+Unresolved Challenges:
+- Build with Terraform
+
+To-do list
+- design in/output format in .json file
+- make connection between front-end and back-end

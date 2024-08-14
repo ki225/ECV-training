@@ -1,0 +1,57 @@
+{
+    "resource": {
+        "type": "cloudfront",
+        "region": "global",
+        "resource-arn": "string"
+    },
+    "waf": {
+        "name": "name",
+        "discribtion": "string",
+        "inspection": "16KB"
+    },
+    "monitor_settings": {
+        "cw_metric_name": "string",
+        "option": ""
+    },
+    "ip": [
+        {
+            "action": "block",
+            "cidr": "10.0.0.0/0"
+        }
+    ],
+    "rules": {
+        "rule_package": {
+            "SQLi": {
+                "mode": "",
+                "SQLi-set": [
+                    {
+                        "rule_id": "",
+                        "rule": "",
+                        "chosen": ""
+                    }
+                ]
+            },
+            "XSS": {
+                "mode": "",
+                "SQLi-set": [
+                    {
+                        "rule_id": "",
+                        "rule": "",
+                        "chosen": ""
+                    }
+                ]
+            }
+        },
+        "rule_created": [
+            {
+                "action": "",
+                "description": "",
+                "rule": ""
+            }
+        ]
+    },
+    "rule_prioritization": {
+        "description": "",
+        "order": []
+    }
+}

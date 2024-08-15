@@ -7,14 +7,14 @@ provider "aws" {
 data "aws_vpc" "selected_vpc" {
   filter {
     name   = "tag:Name"
-    values = ["kg-vpc"]  
+    values = ["<VPC_NAME>"]  
   }
 }
 
 data "aws_subnet" "selected_subnet" {
   filter {
     name   = "tag:Name"
-    values = ["kg-subnet-public1-us-east-1a"] 
+    values = ["<SUBNET_NAME>"] 
   }
 }
 
@@ -23,12 +23,12 @@ data "aws_subnet" "selected_subnet" {
 data "aws_instance" "flask-server" {
   filter {
     name   = "instance-id"
-    values = ["i-06015ad015738c09e"] 
+    values = ["<INSTANCE_ID>"] 
   }
 }
 
 data "aws_security_group" "selected_security_group" {
-  id = "sg-082d61e4945561d06"
+  id = "<SG_ID>"
 }
 
 # --------------------------------- apigw ------------------------------------------------

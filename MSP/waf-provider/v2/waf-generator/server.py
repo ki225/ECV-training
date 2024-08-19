@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
 import re
+import terraform_generator
 
 # =================================== global data ==============================================================
 server = Flask(__name__)
@@ -134,7 +135,7 @@ def rule_ip():
                       "DeletedAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
                     }
                 }
-
+                terraform_generator.generate_waf_terraform(success_responce) # call function for building terraform file
                 return jsonify(success_responce), 200
 
             # Deploy rules

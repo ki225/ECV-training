@@ -4,8 +4,7 @@ from typing import List, Literal, Optional, Union, Dict, Any
 import json
 import os
 from pydantic import TypeAdapter
-
-
+from terraform_executor import execute_terraform
 
 # ------------------------- AggregateKeyType -------------------------
 class TextTransformation(BaseModel):
@@ -135,8 +134,8 @@ class IPSetForwardedIPConfig(BaseModel):
     Fallback_Behavior: Literal["MATCH", "NO_MATCH"]
     Position: Literal["FIRST", "LAST", "ANY"]
 
+# inspect
 class FieldToMatch(BaseModel):
-    # inspect
     field: Union[
         SingleHeader,
         Headers,
@@ -207,7 +206,6 @@ class SelectedStatements(BaseModel):
     
 class MatchStatement(BaseModel):
     Selected_statement: SelectedStatements
-    
 
 StatementType = Union[
     GeoMatchStatement,
@@ -222,10 +220,21 @@ StatementType = Union[
 ]
 
 class OrStatement(BaseModel):
-    Selected_statement: SelectedStatements
+    Statement_amount: str
+    Selected_statement1: SelectedStatements
+    Selected_statement2: SelectedStatements
+    Selected_statement3: Optional[SelectedStatements] = None
+    Selected_statement4: Optional[SelectedStatements] = None
+    Selected_statement5: Optional[SelectedStatements] = None
 
 class AndStatement(BaseModel):
-    Selected_statement: SelectedStatements
+    Statement_amount: str
+    # Selected_statement: List[Selected_statements]
+    Selected_statement1: SelectedStatements
+    Selected_statement2: SelectedStatements
+    Selected_statement3: Optional[SelectedStatements] = None
+    Selected_statement4: Optional[SelectedStatements] = None
+    Selected_statement5: Optional[SelectedStatements] = None
 
 class NotStatement(BaseModel):
     # Selected_statement: SelectedStatements
@@ -235,7 +244,6 @@ class NotStatement(BaseModel):
 
 class ScopeDownStatement(BaseModel):
     statement: Union[MatchStatement, NotStatement, OrStatement, AndStatement]
-
 
 class ForwardedIPRateType(BaseModel):
     Forwarded_IP_Config: ForwardedIPConfig
@@ -329,8 +337,8 @@ class VisibilityConfig(BaseModel):
 class StatementContent(BaseModel):
     Match_Statement: Union[MatchStatement, None] = None
     Not_Statement: Union[NotStatement, None] = None
-    Or_Statement: Union[MatchStatement, None] = None
-    And_Statement: Union[MatchStatement, None] = None
+    Or_Statement: Union[OrStatement, None] = None
+    And_Statement: Union[AndStatement, None] = None
 
 class Statements(BaseModel):
     Statement_type: Literal["MatchStatement","NotStatement","OrStatement","AndStatement"]
@@ -346,12 +354,12 @@ class RulePackage(BaseModel):
     Version: str
     # Add other fields as necessary
 
-class CreatedRule(BaseModel):
-    Name: str
-    Priority: int
-    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
-    Visibility_config: VisibilityConfig
-    Statement: Statements
+# class CreatedRule(BaseModel):
+#     Name: str
+#     Priority: int
+#     Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+#     Visibility_config: VisibilityConfig
+#     Statement: Statements
 
 class Rule(BaseModel):
     Name: str
@@ -409,7 +417,6 @@ class WAFConfig(BaseModel):
 
 def generate_terraform(config: str) -> str:
     config_data = json.loads(config)
-    print(config_data)
     waf_config = TypeAdapter(WAFConfig).validate_python(config_data)
 
     customer_credential = "arn:aws:iam::812428033092:role/kg-terraform-role"   # IAM role ARN
@@ -463,8 +470,7 @@ def generate_rule(rule: Rule) -> str:
         }}
       }}
     """
-    print("==============================")
-    print(rule_config)
+
     return rule_config
 
 
@@ -557,10 +563,8 @@ def generate_xss_match(xss_match_statement):
     """
 
 def generate_field_to_match(field_to_match):
-    # This is a simplified version. Adjust based on your specific FieldToMatch structure
     if 'SingleHeader' in field_to_match:
         return f'single_header {{ name = "{field_to_match.SingleHeader.Name}" }}'
-    # Add other field_to_match types as needed
 
 def generate_text_transformation(text_transformation):
     return f"""
@@ -569,85 +573,21 @@ def generate_text_transformation(text_transformation):
     """
 
 def generate_match_statement(statement):
-    print()
-    print(statement)
     config = ""
-    for i in statement:
-        if i.Match_type == "GeoMatchStatement":
-            print()
-            print(i.GeoMatch_Statement)
-            config += f"""
-                        statement {{
-                            {generate_geo(i.GeoMatch_Statement)}
-                        }}
-                    """
+    if statement.Match_type == "GeoMatchStatement":
+        config += f"""
+                    statement {{
+                        {generate_geo(statement.GeoMatch_Statement)}
+                    }}
+                """
+    elif statement.Match_type == "LabelMatchStatement":
+        config += f"""
+            statement {{
+                {generate_label_match(statement.LabelMatch_Statement)}
+            }}
+        """
+        
     return config
-#     if statement.Match_type == "GeoMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_geo(statement.Selected_statement.GeoMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "RateBasedStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_rate_based_statement(statement.RateBased_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "IPSetReferenceStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_ip_set_reference(statement.IPSetReference_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "LabelMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_label_match(statement.LabelMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "ByteMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_byte_match(statement.ByteMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "RegexPatternSetReferenceStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_regex_pattern_set_reference(statement.RegexPatternSetReference_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "SizeConstraintStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_size_constraint(statement.SizeConstraint_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "SqliMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_sqli_match(statement.SqliMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "XssMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_xss_match(statement.XssMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     else:
-#         raise ValueError(f"Unsupported match type: {statement..Match_type}")
-# -------------------------------------------------------------------------------------------------
 
 def generate_not_statement(statement):
     not_statement_config = f"""
@@ -658,23 +598,34 @@ def generate_not_statement(statement):
     return not_statement_config
 
 def generate_or_statement(statement) :
-    return {
-        "OrStatement": [generate_statement(item) for item in statement.get("OrStatement", [])]
-    }
+    or_statement_config = f"""
+        or_statement {{
+            {generate_match_statement(statement.Or_Statement.Selected_statement)}
+        }}
+    """
+    return or_statement_config
 
 def generate_and_statement(statement) :
-    return {
-        "AndStatement": [generate_statement(item) for item in statement.get("AndStatement", [])]
-    }
-
-
+    statement_num = int(statement.And_Statement.Statement_amount)
+    statement1 = statement.And_Statement.Selected_statement1
+    statement2 = statement.And_Statement.Selected_statement2
+    statement3 = statement.And_Statement.Selected_statement3
+    statement4 = statement.And_Statement.Selected_statement4
+    statement5 = statement.And_Statement.Selected_statement5
+    statement_list = [statement1, statement2, statement3, statement4, statement5] 
+    config = ""
+    for i in range(statement_num):
+        config += f"{generate_match_statement(statement_list[i])}\n"
+    and_statement_config = f"""
+        and_statement {{
+            {config}
+        }}
+    """
+    return and_statement_config
 
 def generate_statement(statement_input):
-    # print(statement_input)
-    # print("===============================================")
     statementType= statement_input.Statement_type
     statement = statement_input.Statement_Content
-    # print(statement)
 
 
     if statementType == "MatchStatement":
@@ -690,7 +641,6 @@ def generate_statement(statement_input):
     else:
         config = f"# Unsupported statement type: {statementType}"
 
-    print(config)
     return config
 
 
@@ -699,83 +649,7 @@ def generate_statement(statement_input):
 
 if __name__ == '__main__':
     config = """
-    {
-        "Resource": {
-            "Type": "alb",
-            "Region": "global",
-            "Resource-id": "",
-            "Resource-arn": "",
-            "Resource-name": "kg-alb"
-        },
-        "Waf": {
-            "Name": "name",
-            "Description": "string",
-            "Inspection": "16KB"
-        },
-        "Monitor_Settings": {
-            "CW_Metric_Name": "string",
-            "Option": ""
-        },
-        "IP": [
-            {
-                "Action": "block",
-                "CIDR": "10.0.0.0/24"
-            }
-        ], 
-        "Rules": {
-            "Rule_Package": [],
-            "Rule_Created": [
 
-                    {
-                        "Name": "rule1",
-                        "Priority": 0,
-                        "Action": {
-                            "Block": {
-                                 "Custom_Response": {
-                                         "Response_Headers": [ 
-                                           {
-                                             "Name": "sd",
-                                             "Value": "ff"
-                                           }
-                                          ],
-                                         "Response_Code": "501",
-                                         "Custom_Response_Body_Key": "ddd"
-                                 }
-
-                             }
-                        },
-                        "Visibility_config": {
-                            "Sampled_Requests_Enabled": true,
-                            "CloudWatch_Metrics_Enabled": true,
-                            "Metric_Name": "matrice"
-                        },
-                        "Statement": {
-                            "Statement_type": "NotStatement",
-                            "Statement_Content": {
-                                "Not_Statement": {
-                                    "Selected_statement":[
-                                        {
-                                            "Match_type": "GeoMatchStatement",
-                                            "GeoMatch_Statement": {"Country_Codes": ["TW"] }
-                                        }
-                                    ]
-
-
-                                }
-                            }
-
-                        }
-                    }
-
-
-            ]
-
-        },
-        "Rule_Prioritization": {
-            "description": "",
-            "order": []
-        }
-    }
     """
 
     tf = generate_terraform(config)
@@ -784,3 +658,6 @@ if __name__ == '__main__':
         f.write(tf)
 
     print(f"Terraform code has been written to {output_file_path}")
+
+    tmpdir = os.getcwd()
+    result, output = execute_terraform(tmpdir)

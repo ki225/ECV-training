@@ -358,3 +358,60 @@ Unresolved Challenges:
 To-do list
 - design in/output format in .json file
 - make connection between front-end and back-end
+
+# 2024/8/14
+Tasks:
+- Build architecture: S3 website send API request into server in private subnet with Terraform
+- design in/output format in .json file
+- front-end diagram
+- Terraform file for building customize waf for customer
+
+Unresolved Challenges:
+- Terraform file for building customize waf for customer
+- make connection between front-end and back-end
+
+# 2024/8/15
+Tasks:
+- design in/output format in .json file
+- Terraform file for building customize waf across different account
+- take notes https://hackmd.io/@okii77/S1talricA
+
+
+Unresolved Challenges:
+- python files for generating terraform files
+- make connection between front-end and back-end
+
+# 2024/8/19
+Tasks:
+- build terraform_generator.py for building terraform file with .json input from front-end
+
+Lessons Learned:
+- Pydantic
+
+Unresolved Challenges:
+- modify the original code with Pydantic to make code clear and easy to be managed 
+
+# 2024/8/20
+Tasks:
+- build terraform_generator.py for building terraform file with .json input from front-end
+
+Unresolved Challenges:
+- modify the original code with Pydantic to make code clear and easy to be managed 
+
+# 2024/8/21
+Tasks:
+- build terraform_generator.py for building terraform file with .json input from front-end
+- re-design the json file
+
+Unresolved Challenges:
+- modify the original code with Pydantic to make code clear and easy to be managed 
+# 2024/8/22
+Tasks:
+- build terraform_generator.py for building terraform file with .json input from front-end
+- document for service usage
+
+Unresolved Challenges:
+- modify the original code with Pydantic to make code clear and easy to be managed 
+
+To-Do
+- Find rules samples for demo

@@ -205,7 +205,6 @@ class SelectedStatements(BaseModel):
     
 class MatchStatement(BaseModel):
     Selected_statement: SelectedStatements
-    
 
 StatementType = Union[
     GeoMatchStatement,
@@ -220,15 +219,21 @@ StatementType = Union[
 ]
 
 class OrStatement(BaseModel):
-    Selected_statement: List[SelectedStatements] = Field(..., min_items=1)
-
-class AndStatement(BaseModel):
     Statement_amount: str
     Selected_statement1: SelectedStatements
     Selected_statement2: SelectedStatements
-    Selected_statement3: Optional[SelectedStatements]
-    Selected_statement4: Optional[SelectedStatements]
-    Selected_statement5: Optional[SelectedStatements]
+    Selected_statement3: Optional[SelectedStatements] = None
+    Selected_statement4: Optional[SelectedStatements] = None
+    Selected_statement5: Optional[SelectedStatements] = None
+
+class AndStatement(BaseModel):
+    Statement_amount: str
+    # Selected_statement: List[Selected_statements]
+    Selected_statement1: SelectedStatements
+    Selected_statement2: SelectedStatements
+    Selected_statement3: Optional[SelectedStatements] = None
+    Selected_statement4: Optional[SelectedStatements] = None
+    Selected_statement5: Optional[SelectedStatements] = None
 
 class NotStatement(BaseModel):
     # Selected_statement: SelectedStatements
@@ -348,12 +353,12 @@ class RulePackage(BaseModel):
     Version: str
     # Add other fields as necessary
 
-class CreatedRule(BaseModel):
-    Name: str
-    Priority: int
-    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
-    Visibility_config: VisibilityConfig
-    Statement: Statements
+# class CreatedRule(BaseModel):
+#     Name: str
+#     Priority: int
+#     Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+#     Visibility_config: VisibilityConfig
+#     Statement: Statements
 
 class Rule(BaseModel):
     Name: str
@@ -607,14 +612,20 @@ def generate_or_statement(statement) :
     return or_statement_config
 
 def generate_and_statement(statement) :
+    statement_num = int(statement.And_Statement.Statement_amount)
+    print(statement_num)
     statement1 = statement.And_Statement.Selected_statement1
     statement2 = statement.And_Statement.Selected_statement2
-    print()
-    print(statement1)
+    statement3 = statement.And_Statement.Selected_statement3
+    statement4 = statement.And_Statement.Selected_statement4
+    statement5 = statement.And_Statement.Selected_statement5
+    statement_list = [statement1, statement2, statement3, statement4, statement5] 
+    config = ""
+    for i in range(statement_num):
+        config += f"{generate_match_statement(statement_list[i])}\n"
     and_statement_config = f"""
         and_statement {{
-            {generate_match_statement(statement1)}
-            {generate_match_statement(statement2)}
+            {config}
         }}
     """
     return and_statement_config
@@ -635,9 +646,6 @@ def generate_statement(statement_input):
     elif statementType == "OrStatement":
         config = generate_or_statement(statement)
     elif statementType == "AndStatement":
-        print()
-        print(statement)
-        print()
         config = generate_and_statement(statement)
     elif statementType == "RateBasedStatement":
         config = generate_rate_based_statement(statement)
@@ -705,6 +713,7 @@ if __name__ == '__main__':
                     "Statement_type": "AndStatement",
                     "Statement_Content": {
                         "And_Statement": {
+                            "Statement_amount": "2",
                             "Selected_statement1": {
                                 
                                     "Match_type": "GeoMatchStatement",

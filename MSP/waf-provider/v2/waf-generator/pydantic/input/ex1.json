@@ -1,0 +1,73 @@
+{
+    "Resource": {
+        "Type": "alb",
+        "Region": "global",
+        "Resource-id": "",
+        "Resource-arn": "",
+        "Resource-name": "kg-alb"
+    },
+    "Waf": {
+        "Name": "name",
+        "Description": "string",
+        "Inspection": "16KB"
+    },
+    "Monitor_Settings": {
+        "CW_Metric_Name": "string",
+        "Option": ""
+    },
+    "IP": [
+        {
+            "Action": "block",
+            "CIDR": "10.0.0.0/24"
+        }
+    ],
+    "Rules": {
+        "Rule_Package": [],
+        "Rule_Created": [
+            {
+                "Name": "rule1",
+                "Priority": 0,
+                "Action": {
+                    "Block": {
+                        "Custom_Response": {
+                            "Response_Headers": [
+                                {
+                                    "Name": "sd",
+                                    "Value": "ff"
+                                }
+                            ],
+                            "Response_Code": "501",
+                            "Custom_Response_Body_Key": "ddd"
+                        }
+                    }
+                },
+                "Visibility_config": {
+                    "Sampled_Requests_Enabled": true,
+                    "CloudWatch_Metrics_Enabled": true,
+                    "Metric_Name": "matrice"
+                },
+                "Statement": {
+                    "Statement_type": "NotStatement",
+                    "Statement_Content": {
+                        "Not_Statement": {
+                            "Selected_statement": [
+                                {
+                                    "Match_type": "GeoMatchStatement",
+                                    "GeoMatch_Statement": {
+                                        "Country_Codes": [
+                                            "TW"
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "Rule_Prioritization": {
+        "description": "",
+        "order": []
+    }
+}

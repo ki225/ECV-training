@@ -5,8 +5,6 @@ import json
 import os
 from pydantic import TypeAdapter
 
-
-
 # ------------------------- AggregateKeyType -------------------------
 class TextTransformation(BaseModel):
     Type: Literal["NONE", "COMPRESS_WHITE_SPACE", "HTML_ENTITY_DECODE", "LOWERCASE", "CMD_LINE", "URL_DECODE",
@@ -222,10 +220,15 @@ StatementType = Union[
 ]
 
 class OrStatement(BaseModel):
-    Selected_statement: SelectedStatements
+    Selected_statement: List[SelectedStatements] = Field(..., min_items=1)
 
 class AndStatement(BaseModel):
-    Selected_statement: SelectedStatements
+    Statement_amount: str
+    Selected_statement1: SelectedStatements
+    Selected_statement2: SelectedStatements
+    Selected_statement3: Optional[SelectedStatements]
+    Selected_statement4: Optional[SelectedStatements]
+    Selected_statement5: Optional[SelectedStatements]
 
 class NotStatement(BaseModel):
     # Selected_statement: SelectedStatements
@@ -235,7 +238,6 @@ class NotStatement(BaseModel):
 
 class ScopeDownStatement(BaseModel):
     statement: Union[MatchStatement, NotStatement, OrStatement, AndStatement]
-
 
 class ForwardedIPRateType(BaseModel):
     Forwarded_IP_Config: ForwardedIPConfig
@@ -329,8 +331,8 @@ class VisibilityConfig(BaseModel):
 class StatementContent(BaseModel):
     Match_Statement: Union[MatchStatement, None] = None
     Not_Statement: Union[NotStatement, None] = None
-    Or_Statement: Union[MatchStatement, None] = None
-    And_Statement: Union[MatchStatement, None] = None
+    Or_Statement: Union[OrStatement, None] = None
+    And_Statement: Union[AndStatement, None] = None
 
 class Statements(BaseModel):
     Statement_type: Literal["MatchStatement","NotStatement","OrStatement","AndStatement"]
@@ -412,7 +414,7 @@ def generate_terraform(config: str) -> str:
     print(config_data)
     waf_config = TypeAdapter(WAFConfig).validate_python(config_data)
 
-    customer_credential = "arn:aws:iam::812428033092:role/kg-terraform-role"   # IAM role ARN
+    customer_credential = ""   # IAM role ARN
 
     terraform_config = f"""
     # AWS Provider
@@ -557,10 +559,8 @@ def generate_xss_match(xss_match_statement):
     """
 
 def generate_field_to_match(field_to_match):
-    # This is a simplified version. Adjust based on your specific FieldToMatch structure
     if 'SingleHeader' in field_to_match:
         return f'single_header {{ name = "{field_to_match.SingleHeader.Name}" }}'
-    # Add other field_to_match types as needed
 
 def generate_text_transformation(text_transformation):
     return f"""
@@ -569,85 +569,26 @@ def generate_text_transformation(text_transformation):
     """
 
 def generate_match_statement(statement):
+    config = ""
     print()
     print(statement)
-    config = ""
-    for i in statement:
-        if i.Match_type == "GeoMatchStatement":
-            print()
-            print(i.GeoMatch_Statement)
-            config += f"""
-                        statement {{
-                            {generate_geo(i.GeoMatch_Statement)}
-                        }}
-                    """
+    if statement.Match_type == "GeoMatchStatement":
+        print()
+        print(statement.GeoMatch_Statement)
+        config += f"""
+                    statement {{
+                        {generate_geo(statement.GeoMatch_Statement)}
+                    }}
+                """
+    elif statement.Match_type == "LabelMatchStatement":
+        print(statement.LabelMatch_Statement)
+        config += f"""
+            statement {{
+                {generate_label_match(statement.LabelMatch_Statement)}
+            }}
+        """
+        
     return config
-#     if statement.Match_type == "GeoMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_geo(statement.Selected_statement.GeoMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "RateBasedStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_rate_based_statement(statement.RateBased_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "IPSetReferenceStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_ip_set_reference(statement.IPSetReference_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "LabelMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_label_match(statement.LabelMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "ByteMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_byte_match(statement.ByteMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "RegexPatternSetReferenceStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_regex_pattern_set_reference(statement.RegexPatternSetReference_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "SizeConstraintStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_size_constraint(statement.SizeConstraint_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "SqliMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_sqli_match(statement.SqliMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     elif statement.Match_type == "XssMatchStatement":
-#         config = f"""
-#             statement {{
-#                 {generate_xss_match(statement.XssMatch_Statement)}
-#             }}
-#         """
-#         return config
-#     else:
-#         raise ValueError(f"Unsupported match type: {statement..Match_type}")
-# -------------------------------------------------------------------------------------------------
 
 def generate_not_statement(statement):
     not_statement_config = f"""
@@ -658,23 +599,33 @@ def generate_not_statement(statement):
     return not_statement_config
 
 def generate_or_statement(statement) :
-    return {
-        "OrStatement": [generate_statement(item) for item in statement.get("OrStatement", [])]
-    }
+    or_statement_config = f"""
+        or_statement {{
+            {generate_match_statement(statement.Or_Statement.Selected_statement)}
+        }}
+    """
+    return or_statement_config
 
 def generate_and_statement(statement) :
-    return {
-        "AndStatement": [generate_statement(item) for item in statement.get("AndStatement", [])]
-    }
-
-
+    statement1 = statement.And_Statement.Selected_statement1
+    statement2 = statement.And_Statement.Selected_statement2
+    print()
+    print(statement1)
+    and_statement_config = f"""
+        and_statement {{
+            {generate_match_statement(statement1)}
+            {generate_match_statement(statement2)}
+        }}
+    """
+    return and_statement_config
 
 def generate_statement(statement_input):
-    # print(statement_input)
-    # print("===============================================")
+    print()
+    print(statement_input)
+    print("===============================================")
     statementType= statement_input.Statement_type
     statement = statement_input.Statement_Content
-    # print(statement)
+    print(statement)
 
 
     if statementType == "MatchStatement":
@@ -684,6 +635,9 @@ def generate_statement(statement_input):
     elif statementType == "OrStatement":
         config = generate_or_statement(statement)
     elif statementType == "AndStatement":
+        print()
+        print(statement)
+        print()
         config = generate_and_statement(statement)
     elif statementType == "RateBasedStatement":
         config = generate_rate_based_statement(statement)
@@ -699,83 +653,87 @@ def generate_statement(statement_input):
 
 if __name__ == '__main__':
     config = """
-    {
-        "Resource": {
-            "Type": "alb",
-            "Region": "global",
-            "Resource-id": "",
-            "Resource-arn": "",
-            "Resource-name": "kg-alb"
-        },
-        "Waf": {
-            "Name": "name",
-            "Description": "string",
-            "Inspection": "16KB"
-        },
-        "Monitor_Settings": {
-            "CW_Metric_Name": "string",
-            "Option": ""
-        },
-        "IP": [
+{
+    "Resource": {
+        "Type": "alb",
+        "Region": "global",
+        "Resource-id": "",
+        "Resource-arn": "",
+        "Resource-name": "kg-alb"
+    },
+    "Waf": {
+        "Name": "name",
+        "Description": "string",
+        "Inspection": "16KB"
+    },
+    "Monitor_Settings": {
+        "CW_Metric_Name": "string",
+        "Option": ""
+    },
+    "IP": [
+        {
+            "Action": "block",
+            "CIDR": "10.0.0.0/24"
+        }
+    ],
+    "Rules": {
+        "Rule_Package": [],
+        "Rule_Created": [
             {
-                "Action": "block",
-                "CIDR": "10.0.0.0/24"
-            }
-        ], 
-        "Rules": {
-            "Rule_Package": [],
-            "Rule_Created": [
-
-                    {
-                        "Name": "rule1",
-                        "Priority": 0,
-                        "Action": {
-                            "Block": {
-                                 "Custom_Response": {
-                                         "Response_Headers": [ 
-                                           {
-                                             "Name": "sd",
-                                             "Value": "ff"
-                                           }
-                                          ],
-                                         "Response_Code": "501",
-                                         "Custom_Response_Body_Key": "ddd"
-                                 }
-
-                             }
-                        },
-                        "Visibility_config": {
-                            "Sampled_Requests_Enabled": true,
-                            "CloudWatch_Metrics_Enabled": true,
-                            "Metric_Name": "matrice"
-                        },
-                        "Statement": {
-                            "Statement_type": "NotStatement",
-                            "Statement_Content": {
-                                "Not_Statement": {
-                                    "Selected_statement":[
-                                        {
-                                            "Match_type": "GeoMatchStatement",
-                                            "GeoMatch_Statement": {"Country_Codes": ["TW"] }
-                                        }
-                                    ]
-
-
+                "Name": "rule1",
+                "Priority": 0,
+                "Action": {
+                    "Block": {
+                        "Custom_Response": {
+                            "Response_Headers": [
+                                {
+                                    "Name": "sd",
+                                    "Value": "ff"
                                 }
-                            }
-
+                            ],
+                            "Response_Code": "501",
+                            "Custom_Response_Body_Key": "ddd"
                         }
                     }
-
-
-            ]
-
-        },
-        "Rule_Prioritization": {
-            "description": "",
-            "order": []
-        }
+                },
+                "Visibility_config": {
+                    "Sampled_Requests_Enabled": true,
+                    "CloudWatch_Metrics_Enabled": true,
+                    "Metric_Name": "matrice"
+                },
+                "Statement": {
+                    "Statement_type": "AndStatement",
+                    "Statement_Content": {
+                        "And_Statement": {
+                            "Selected_statement1": {
+                                
+                                    "Match_type": "GeoMatchStatement",
+                                    "GeoMatch_Statement": {
+                                        "Country_Codes": [
+                                            "TW"
+                                        ]
+                                    }
+                                
+                                
+                            },
+                            "Selected_statement2": {
+                                "Match_type": "LabelMatchStatement",
+                                "LabelMatch_Statement": {
+                                    "Scope": "NAMESPACE",
+                                    "Key": "awswaf:111122223333:rulegroup:testRules:namespace1:namespace2:"
+                                }      
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "Rule_Prioritization": {
+        "description": "",
+        "order": []
     }
+}
     """
 
     tf = generate_terraform(config)

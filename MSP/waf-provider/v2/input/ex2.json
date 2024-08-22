@@ -50,20 +50,24 @@
                     "Statement_type": "AndStatement",
                     "Statement_Content": {
                         "And_Statement": {
+                            "Statement_amount": "2",
                             "Selected_statement1": {
-                                "Match_type": "GeoMatchStatement",
-                                "GeoMatch_Statement": {
-                                    "Country_Codes": [
-                                        "TW"
-                                    ]
-                                }
+                                
+                                    "Match_type": "GeoMatchStatement",
+                                    "GeoMatch_Statement": {
+                                        "Country_Codes": [
+                                            "TW"
+                                        ]
+                                    }
+                                
+                                
                             },
                             "Selected_statement2": {
                                 "Match_type": "LabelMatchStatement",
                                 "LabelMatch_Statement": {
                                     "Scope": "NAMESPACE",
                                     "Key": "awswaf:111122223333:rulegroup:testRules:namespace1:namespace2:"
-                                }
+                                }      
                             }
                         }
                     }

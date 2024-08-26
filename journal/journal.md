@@ -393,10 +393,10 @@ Unresolved Challenges:
 
 # 2024/8/20
 Tasks:
-- build terraform_generator.py for building terraform file with .json input from front-end
+- Create terraform_generator.py to generate Terraform configuration files using .json input from the front-end.
 
 Unresolved Challenges:
-- modify the original code with Pydantic to make code clear and easy to be managed 
+- complete the original code with Pydantic
 
 # 2024/8/21
 Tasks:
@@ -409,6 +409,7 @@ Unresolved Challenges:
 Tasks:
 - build terraform_generator.py for building terraform file with .json input from front-end
 - document for service usage
+- document for request body with Pydantic
 
 Unresolved Challenges:
 - modify the original code with Pydantic to make code clear and easy to be managed 

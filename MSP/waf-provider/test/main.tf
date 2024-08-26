@@ -1,4 +1,28 @@
 # main.tf
+provider "aws" {
+  region = var.region
+}
+
+resource "aws_iam_role" "ec2_ssm_role" {
+  name = "ec2_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_ssm_policy_attachment" {
+  role       = aws_iam_role.ec2_ssm_role.name
+  policy_arn  = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 
 resource "aws_vpc" "kg_vpc" {
   cidr_block = "10.0.0.0/16"
@@ -124,15 +148,21 @@ resource "aws_route_table_association" "private_1b" {
   route_table_id = aws_route_table.private.id
 }
 
+resource "aws_iam_instance_profile" "ec2_ssm_instance_profile" {
+  name = "ec2_ssm_instance_profile"
+  role = aws_iam_role.ec2_ssm_role.name
+}
+
 # EC2 Instance
 resource "aws_instance" "flask_server" {
   ami           = var.ami_id
   instance_type = var.instance_type
   subnet_id     = aws_subnet.pri_subnet_1a.id
-  key_name               = var.key_pair_name
+
+  iam_instance_profile = aws_iam_instance_profile.ec2_ssm_instance_profile.name
+  key_name      = var.key_pair
 
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  iam_instance_profile = data.aws_iam_role.existing_ssm_role.name
 
   tags = {
     Name = "App Server"
@@ -145,7 +175,7 @@ resource "aws_instance" "flask_server" {
 
       pip3 install flask
 
-      cat <<EOT > /home/ec2-user/generator/server.py
+      cat <<EOT > /home/ec2-user/server.py
           from flask import Flask, request, jsonify
           from datetime import datetime
           import re
@@ -523,18 +553,18 @@ resource "aws_api_gateway_rest_api" "api" {
 }
 
 # -------------------------------- resources ---------------------------------------
-resource "aws_api_gateway_resource" "v1" {
+resource "aws_api_gateway_resource" "v2" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   parent_id   = aws_api_gateway_rest_api.api.root_resource_id
-  path_part   = "v1"
+  path_part   = "v2"
   depends_on = [ aws_api_gateway_rest_api.api ]
 }
 
 resource "aws_api_gateway_resource" "waf" {
   rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_resource.v1.id
+  parent_id   = aws_api_gateway_resource.v2.id
   path_part   = "waf"
-  depends_on = [ aws_api_gateway_resource.v1 ]
+  depends_on = [ aws_api_gateway_resource.v2 ]
 }
 
 resource "aws_api_gateway_resource" "ip_blocks" {
@@ -582,10 +612,8 @@ resource "aws_api_gateway_integration" "get_ip_blocks_integration" {
   resource_id             = aws_api_gateway_resource.ip_blocks.id
   http_method             = aws_api_gateway_method.get_ip_blocks.http_method
   integration_http_method = "GET"
-  type                    = "HTTP_PROXY"
-  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/ip-blocks"
-  connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
+  type                     = "HTTP_PROXY"
+  uri                      = "http://${aws_lb.app_nlb.dns_name}:5000/v2/waf/ip-blocks"
   depends_on = [ aws_api_gateway_method.get_ip_blocks ]
 }
 
@@ -595,9 +623,7 @@ resource "aws_api_gateway_integration" "post_ip_blocks_integration" {
   http_method             = aws_api_gateway_method.post_ip_blocks.http_method
   integration_http_method = "POST"
   type                     = "HTTP_PROXY"
-  uri                      = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/ip-blocks"
-  connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
+  uri                      = "http://${aws_lb.app_nlb.dns_name}:5000/v2/waf/ip-blocks"
   depends_on = [ aws_api_gateway_method.post_ip_blocks ]
 }
 
@@ -653,9 +679,8 @@ resource "aws_api_gateway_integration_response" "get_ip_blocks_integration_respo
   resource_id = aws_api_gateway_resource.ip_blocks.id
   http_method = aws_api_gateway_method.get_ip_blocks.http_method
   status_code = aws_api_gateway_method_response.get_ip_blocks_response.status_code
-  
-  depends_on = [ 
-    aws_api_gateway_method_response.get_ip_blocks_response 
+  depends_on = [
+    aws_api_gateway_method_response.get_ip_blocks_response
   ]
 }
 
@@ -664,8 +689,8 @@ resource "aws_api_gateway_integration_response" "post_ip_blocks_integration_resp
   resource_id = aws_api_gateway_resource.ip_blocks.id
   http_method = aws_api_gateway_method.post_ip_blocks.http_method
   status_code = aws_api_gateway_method_response.post_ip_blocks_response.status_code
-  depends_on = [ 
-    aws_api_gateway_method_response.post_ip_blocks_response 
+  depends_on = [
+    aws_api_gateway_method_response.post_ip_blocks_response
   ]
 }
 
@@ -716,10 +741,7 @@ resource "aws_api_gateway_integration" "get_rules_integration" {
   http_method             = aws_api_gateway_method.get_rules.http_method
   integration_http_method = "GET"
   type                    = "HTTP_PROXY"
-  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/rules"
-
-  connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
+  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v2/waf/rules"
   depends_on = [ aws_api_gateway_method.get_rules ]
 }
 
@@ -729,11 +751,8 @@ resource "aws_api_gateway_integration" "post_rules_integration" {
   http_method             = aws_api_gateway_method.post_rules.http_method
   integration_http_method = "POST"
   type                    = "HTTP_PROXY"
-  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/rules"
-
-  connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
-  depends_on = [ aws_api_gateway_method.post_rules ]    
+  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v2/waf/rules"
+  depends_on = [ aws_api_gateway_method.post_rules ]
 }
 
 resource "aws_api_gateway_integration" "cors_integration-rules" {
@@ -741,7 +760,6 @@ resource "aws_api_gateway_integration" "cors_integration-rules" {
   resource_id = aws_api_gateway_resource.rules.id
   http_method = aws_api_gateway_method.cors_options-ipblocks.http_method
   type        = "MOCK"
-
 
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
@@ -826,7 +844,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
-      aws_api_gateway_integration.get_ip_blocks_integration, 
+      aws_api_gateway_integration.get_ip_blocks_integration,
       aws_api_gateway_integration.post_ip_blocks_integration,
       aws_api_gateway_integration.cors_integration-ipblocks
       ]
@@ -848,30 +866,66 @@ resource "aws_api_gateway_deployment" "deployment2" {
   ]
 }
 
-# ======================== S3 ==================================================
 
-resource "aws_s3_bucket" "kg_frontend_bucket" {
-  bucket = "kg-waf-manager-front-end-server"  
+# variables.tf
+# terraform apply -var="region=us-west-2" -var="stage_name=dev" -var="backend_url=https://your-backend-url.com"
 
-  tags = {
-    Name        = "kg-s3"
-    Environment = "Dev"
-  }
+variable "region" {
+  description = "AWS region"
+  default     = "us-east-1"
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC"
+  default     = "10.0.0.0/16"
+}
+
+variable "public_subnet_cidrs" {
+  description = "CIDR blocks for the public subnets"
+  type        = list(string)
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
+}
+
+variable "private_subnet_cidrs" {
+  description = "CIDR blocks for the private subnets"
+  type        = list(string)
+  default     = ["10.0.3.0/24", "10.0.4.0/24"]
+}
+
+variable "availability_zones" {
+  description = "Availability zones"
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b"]
+}
+
+variable "ami_id" {
+  description = "AMI ID for the EC2 instance"
+  default     = "ami-03972092c42e8c0ca"  # Replace with your desired AMI
+}
+
+variable "instance_type" {
+  description = "Instance type for the EC2 instance"
+  default     = "t2.micro"
+}
+
+variable "stage_name" {
+  description = "The name of the API Gateway stage"
+  type        = string
+  default     = "dev"
+}
+
+variable "flask_port" {
+  description = "Port for the Flask server"
+  type        = number
+  default     = 5000
+}
+
+variable "key_pair" {
+  description = "The name of the EC2 key pair to use for SSH access."
+  type        = string
 }
 
 
-resource "null_resource" "flask_server" {
-  provisioner "local-exec" {
-    command = <<EOT
-      export API_GATEWAY_URL=${local.api_gateway_url}
-      export FLASK_APP=/home/ec2-user/generator/server.py
-      export FLASK_RUN_PORT=${var.flask_port}
-      python3 /home/ec2-user/server.py &
-    EOT
-  }
-
-  # Trigger recreation of this resource when the API Gateway URL changes
-  triggers = {
-    api_gateway_url = local.api_gateway_url
-  }
+locals {
+  api_gateway_url = "https://${aws_api_gateway_rest_api.api.id}.execute-api.${var.region}.amazonaws.com/${var.stage_name}:5000/"
 }

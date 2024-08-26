@@ -1,4 +1,7 @@
 # main.tf
+provider "aws" {
+  region = var.region
+}
 
 resource "aws_vpc" "kg_vpc" {
   cidr_block = "10.0.0.0/16"
@@ -129,10 +132,8 @@ resource "aws_instance" "flask_server" {
   ami           = var.ami_id
   instance_type = var.instance_type
   subnet_id     = aws_subnet.pri_subnet_1a.id
-  key_name               = var.key_pair_name
 
   vpc_security_group_ids = [aws_security_group.app_sg.id]
-  iam_instance_profile = data.aws_iam_role.existing_ssm_role.name
 
   tags = {
     Name = "App Server"
@@ -145,7 +146,7 @@ resource "aws_instance" "flask_server" {
 
       pip3 install flask
 
-      cat <<EOT > /home/ec2-user/generator/server.py
+      cat <<EOT > /home/ec2-user/server.py
           from flask import Flask, request, jsonify
           from datetime import datetime
           import re
@@ -523,18 +524,18 @@ resource "aws_api_gateway_rest_api" "api" {
 }
 
 # -------------------------------- resources ---------------------------------------
-resource "aws_api_gateway_resource" "v1" {
+resource "aws_api_gateway_resource" "v2" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   parent_id   = aws_api_gateway_rest_api.api.root_resource_id
-  path_part   = "v1"
+  path_part   = "v2"
   depends_on = [ aws_api_gateway_rest_api.api ]
 }
 
 resource "aws_api_gateway_resource" "waf" {
   rest_api_id = aws_api_gateway_rest_api.api.id
-  parent_id   = aws_api_gateway_resource.v1.id
+  parent_id   = aws_api_gateway_resource.v2.id
   path_part   = "waf"
-  depends_on = [ aws_api_gateway_resource.v1 ]
+  depends_on = [ aws_api_gateway_resource.v2 ]
 }
 
 resource "aws_api_gateway_resource" "ip_blocks" {
@@ -582,10 +583,8 @@ resource "aws_api_gateway_integration" "get_ip_blocks_integration" {
   resource_id             = aws_api_gateway_resource.ip_blocks.id
   http_method             = aws_api_gateway_method.get_ip_blocks.http_method
   integration_http_method = "GET"
-  type                    = "HTTP_PROXY"
-  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/ip-blocks"
-  connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
+  type                     = "HTTP_PROXY"
+  uri                      = "http://${aws_lb.app_nlb.dns_name}:5000/v2/waf/ip-blocks"
   depends_on = [ aws_api_gateway_method.get_ip_blocks ]
 }
 
@@ -595,9 +594,7 @@ resource "aws_api_gateway_integration" "post_ip_blocks_integration" {
   http_method             = aws_api_gateway_method.post_ip_blocks.http_method
   integration_http_method = "POST"
   type                     = "HTTP_PROXY"
-  uri                      = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/ip-blocks"
-  connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
+  uri                      = "http://${aws_lb.app_nlb.dns_name}:5000/v2/waf/ip-blocks"
   depends_on = [ aws_api_gateway_method.post_ip_blocks ]
 }
 
@@ -653,9 +650,8 @@ resource "aws_api_gateway_integration_response" "get_ip_blocks_integration_respo
   resource_id = aws_api_gateway_resource.ip_blocks.id
   http_method = aws_api_gateway_method.get_ip_blocks.http_method
   status_code = aws_api_gateway_method_response.get_ip_blocks_response.status_code
-  
-  depends_on = [ 
-    aws_api_gateway_method_response.get_ip_blocks_response 
+  depends_on = [
+    aws_api_gateway_method_response.get_ip_blocks_response
   ]
 }
 
@@ -664,8 +660,8 @@ resource "aws_api_gateway_integration_response" "post_ip_blocks_integration_resp
   resource_id = aws_api_gateway_resource.ip_blocks.id
   http_method = aws_api_gateway_method.post_ip_blocks.http_method
   status_code = aws_api_gateway_method_response.post_ip_blocks_response.status_code
-  depends_on = [ 
-    aws_api_gateway_method_response.post_ip_blocks_response 
+  depends_on = [
+    aws_api_gateway_method_response.post_ip_blocks_response
   ]
 }
 
@@ -716,10 +712,7 @@ resource "aws_api_gateway_integration" "get_rules_integration" {
   http_method             = aws_api_gateway_method.get_rules.http_method
   integration_http_method = "GET"
   type                    = "HTTP_PROXY"
-  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/rules"
-
-  connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
+  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v2/waf/rules"
   depends_on = [ aws_api_gateway_method.get_rules ]
 }
 
@@ -729,11 +722,8 @@ resource "aws_api_gateway_integration" "post_rules_integration" {
   http_method             = aws_api_gateway_method.post_rules.http_method
   integration_http_method = "POST"
   type                    = "HTTP_PROXY"
-  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/rules"
-
-  connection_type         = "VPC_LINK"
-  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
-  depends_on = [ aws_api_gateway_method.post_rules ]    
+  uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v2/waf/rules"
+  depends_on = [ aws_api_gateway_method.post_rules ]
 }
 
 resource "aws_api_gateway_integration" "cors_integration-rules" {
@@ -741,7 +731,6 @@ resource "aws_api_gateway_integration" "cors_integration-rules" {
   resource_id = aws_api_gateway_resource.rules.id
   http_method = aws_api_gateway_method.cors_options-ipblocks.http_method
   type        = "MOCK"
-
 
   request_templates = {
     "application/json" = "{\"statusCode\": 200}"
@@ -826,7 +815,7 @@ resource "aws_api_gateway_deployment" "deployment" {
     create_before_destroy = true
   }
   depends_on = [
-      aws_api_gateway_integration.get_ip_blocks_integration, 
+      aws_api_gateway_integration.get_ip_blocks_integration,
       aws_api_gateway_integration.post_ip_blocks_integration,
       aws_api_gateway_integration.cors_integration-ipblocks
       ]
@@ -851,7 +840,7 @@ resource "aws_api_gateway_deployment" "deployment2" {
 # ======================== S3 ==================================================
 
 resource "aws_s3_bucket" "kg_frontend_bucket" {
-  bucket = "kg-waf-manager-front-end-server"  
+  bucket = "kg-waf-manager-front-end-server"
 
   tags = {
     Name        = "kg-s3"
@@ -864,7 +853,7 @@ resource "null_resource" "flask_server" {
   provisioner "local-exec" {
     command = <<EOT
       export API_GATEWAY_URL=${local.api_gateway_url}
-      export FLASK_APP=/home/ec2-user/generator/server.py
+      export FLASK_APP=/home/ec2-user/server.py
       export FLASK_RUN_PORT=${var.flask_port}
       python3 /home/ec2-user/server.py &
     EOT

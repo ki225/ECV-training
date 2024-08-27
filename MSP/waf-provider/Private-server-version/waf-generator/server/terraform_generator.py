@@ -192,7 +192,7 @@ class XssMatchStatement(BaseModel):
 # ------------------------- statement -------------------------
 
 class SelectedStatements(BaseModel):
-    Match_type: str
+    Match_Type: str
     Not: Optional[bool] = None
     GeoMatch_Statement: Optional[GeoMatchStatement] = None
     IPSetReference_Statement: Optional[IPSetReferenceStatement] = None
@@ -205,7 +205,7 @@ class SelectedStatements(BaseModel):
     XssMatch_Statement: Optional[XssMatchStatement] = None
     
 class MatchStatement(BaseModel):
-    Selected_statement: SelectedStatements
+    Selected_Statement: SelectedStatements
 
 StatementType = Union[
     GeoMatchStatement,
@@ -220,50 +220,50 @@ StatementType = Union[
 ]
 
 class OrStatement(BaseModel):
-    Statement_amount: int
-    Selected_statement1: SelectedStatements
-    Selected_statement2: SelectedStatements
-    Selected_statement3: Optional[SelectedStatements] = None
-    Selected_statement4: Optional[SelectedStatements] = None
-    Selected_statement5: Optional[SelectedStatements] = None
+    Statement_Amount: int
+    Selected_Statement1: SelectedStatements
+    Selected_Statement2: SelectedStatements
+    Selected_Statement3: Optional[SelectedStatements] = None
+    Selected_Statement4: Optional[SelectedStatements] = None
+    Selected_Statement5: Optional[SelectedStatements] = None
 
 class AndStatement(BaseModel):
-    Statement_amount: str
-    # Selected_statement: List[Selected_statements]
-    Selected_statement1: SelectedStatements
-    Selected_statement2: SelectedStatements
-    Selected_statement3: Optional[SelectedStatements] = None
-    Selected_statement4: Optional[SelectedStatements] = None
-    Selected_statement5: Optional[SelectedStatements] = None
+    Statement_Amount: str
+    # Selected_Statement: List[Selected_Statements]
+    Selected_Statement1: SelectedStatements
+    Selected_Statement2: SelectedStatements
+    Selected_Statement3: Optional[SelectedStatements] = None
+    Selected_Statement4: Optional[SelectedStatements] = None
+    Selected_Statement5: Optional[SelectedStatements] = None
 
 class NotStatement(BaseModel):
-    # Selected_statement: SelectedStatements
-    Selected_statement: SelectedStatements
+    # Selected_Statement: SelectedStatements
+    Selected_Statement: SelectedStatements
 
 # ------------------------- rate_type -------------------------
 
 class ScopeDownStatement(BaseModel):
-    statement: Union[MatchStatement, NotStatement, OrStatement, AndStatement]
+    Statement: Union[MatchStatement, NotStatement, OrStatement, AndStatement]
 
 class ForwardedIPRateType(BaseModel):
     Forwarded_IP_Config: ForwardedIPConfig
-    Scope_down_statement: Optional[ScopeDownStatement] = None
+    Scope_Down_Statement: Optional[ScopeDownStatement] = None
 
 class IPRateType(BaseModel):
-    Scope_down_statement: Optional[ScopeDownStatement] = None
+    Scope_Down_Statement: Optional[ScopeDownStatement] = None
 
 class CustomKeysRateType(BaseModel):
     Custom_Keys: List[Aggregation_Key]
-    Scope_down_statement: Optional[ScopeDownStatement] = None
+    Scope_Down_Statement: Optional[ScopeDownStatement] = None
 
 class ConstantRateType(BaseModel):
-    Scope_down_statement: ScopeDownStatement
+    Scope_Down_Statement: ScopeDownStatement
 
 class RateBasedStatement(BaseModel):
     Limit: int = Field(..., ge=100, le=2000000000)
     Aggregate_Key_Type: Literal["FORWARDED_IP", "IP", "CUSTOM_KEYS", "CONSTANT"]
-    Forwarded_IP_config: Optional[ForwardedIPConfig] = None
-    Scope_down_statement: Optional[ScopeDownStatement] = None
+    Forwarded_IP_Config: Optional[ForwardedIPConfig] = None
+    Scope_Down_Statement: Optional[ScopeDownStatement] = None
     Custom_Keys: Optional[List[Aggregation_Key]] = None
 
     @property
@@ -367,7 +367,7 @@ class StatementContent(BaseModel):
     And_Statement: Union[AndStatement, None] = None
 
 class Statements(BaseModel):
-    Statement_type: Literal["MatchStatement","NotStatement","OrStatement","AndStatement"]
+    Statement_Type: Literal["MatchStatement","NotStatement","OrStatement","AndStatement"]
     Statement_Content: StatementContent
 
 class RuleLabel(BaseModel):
@@ -379,7 +379,7 @@ class Rule(BaseModel):
     Name: str
     Priority: int
     Action: Action
-    Visibility_config: VisibilityConfig
+    Visibility_Config: VisibilityConfig
     Statement: Statements
 
 class Rules(BaseModel):
@@ -399,9 +399,9 @@ class Resource(BaseModel):
         "verifiedaccess"
     ]
     Region: str
-    Resource_id: str 
-    Resource_arn: str 
-    Resource_name: str 
+    Resource_Id: str 
+    Resource_Arn: str 
+    Resource_Name: str 
 
 class WAF(BaseModel):
     Name: str
@@ -475,9 +475,9 @@ def generate_rule(rule: Rule) -> str:
         priority = {rule.Priority}
         {generate_action(rule.Action)}
         visibility_config {{
-          cloudwatch_metrics_enabled = {str(rule.Visibility_config.CloudWatch_Metrics_Enabled).lower()}
-          metric_name                = "{rule.Visibility_config.Metric_Name}"
-          sampled_requests_enabled   = {str(rule.Visibility_config.Sampled_Requests_Enabled).lower()}
+          cloudwatch_metrics_enabled = {str(rule.Visibility_Config.CloudWatch_Metrics_Enabled).lower()}
+          metric_name                = "{rule.Visibility_Config.Metric_Name}"
+          sampled_requests_enabled   = {str(rule.Visibility_Config.Sampled_Requests_Enabled).lower()}
         }}
         statement {{
           {generate_statement(rule.Statement)}
@@ -524,13 +524,13 @@ def generate_label_match(label_match_statement):
 def generate_byte_match(byte_match_statement):
     return f"""
         byte_match_statement {{
-            search_string         = "{byte_match_statement.SearchString}"
-            positional_constraint = "{byte_match_statement.PositionalConstraint}"
+            search_string         = "{byte_match_statement.Search_String}"
+            positional_constraint = "{byte_match_statement.Positional_Constraint}"
             field_to_match {{
-                {generate_field_to_match(byte_match_statement.FieldToMatch)}
+                {generate_field_to_match(byte_match_statement.Field_To_Match)}
             }}
             text_transformation {{
-                {generate_text_transformation(byte_match_statement.TextTransformations[0])}
+                {generate_text_transformation(byte_match_statement.Text_Transformations[0])}
             }}
         }}
     """
@@ -541,13 +541,13 @@ def generate_regex_pattern_set_reference(regex_pattern_set_statement):
 def generate_regex_match(regex_match_statement):
     return f"""
         regex_match_statement {{
-            regex_string = "{regex_match_statement.RegexString}"
+            regex_string = "{regex_match_statement.Regex_String}"
             field_to_match {{
-                {regex_match_statement.FieldToMatch}
+                {regex_match_statement.Field_To_Match}
             }}
             text_transformation {{
-                priority = {regex_match_statement.TextTransformation.Priority}
-                type     = "{regex_match_statement.TextTransformation.Type}"
+                priority = {regex_match_statement.Text_Transformation.Priority}
+                type     = "{regex_match_statement.Text_Transformation.Type}"
             }}
         }}
     """
@@ -555,13 +555,13 @@ def generate_regex_match(regex_match_statement):
 def generate_size_constraint(size_constraint_statement):
     return f"""
         size_constraint_statement {{
-            comparison_operator = "{size_constraint_statement.ComparisonOperator}"
+            comparison_operator = "{size_constraint_statement.Comparison_Operator}"
             size                = {size_constraint_statement.Size}
             field_to_match {{
-                {generate_field_to_match(size_constraint_statement.FieldToMatch)}
+                {generate_field_to_match(size_constraint_statement.Field_To_Match)}
             }}
             text_transformation {{
-                {generate_text_transformation(size_constraint_statement.TextTransformations[0])}
+                {generate_text_transformation(size_constraint_statement.Text_Transformations[0])}
             }}
         }}
     """
@@ -570,10 +570,10 @@ def generate_sqli_match(sqli_match_statement):
     return f"""
         sqli_match_statement {{
             field_to_match {{
-                {generate_field_to_match(sqli_match_statement.FieldToMatch)}
+                {generate_field_to_match(sqli_match_statement.Field_To_Match)}
             }}
             text_transformation {{
-                {generate_text_transformation(sqli_match_statement.TextTransformations[0])}
+                {generate_text_transformation(sqli_match_statement.Text_Transformations[0])}
             }}
         }}
     """
@@ -582,17 +582,17 @@ def generate_xss_match(xss_match_statement):
     return f"""
         xss_match_statement {{
             field_to_match {{
-                {generate_field_to_match(xss_match_statement.FieldToMatch)}
+                {generate_field_to_match(xss_match_statement.Field_To_Match)}
             }}
             text_transformation {{
-                {generate_text_transformation(xss_match_statement.TextTransformations[0])}
+                {generate_text_transformation(xss_match_statement.Text_Transformations[0])}
             }}
         }}
     """
 
 def generate_field_to_match(field_to_match):
     if 'SingleHeader' in field_to_match:
-        return f'single_header {{ name = "{field_to_match.SingleHeader.Name}" }}'
+        return f'single_header {{ name = "{field_to_match.Single_Header.Name}" }}'
 
 def generate_text_transformation(text_transformation):
     return f"""
@@ -600,64 +600,64 @@ def generate_text_transformation(text_transformation):
         type     = "{text_transformation.Type}"
     """
 
-def generate_match_statement(statement): # .Match_Statement.Selected_statement
+def generate_match_statement(statement): # .Match_Statement.Selected_Statement
     config = ""
-    if statement.Match_type == "GeoMatchStatement":
+    if statement.Match_Type == "GeoMatchStatement":
         config += f"""
             statement {{
                 {generate_geo(statement.GeoMatch_Statement)}
             }}
         """
-    elif statement.Match_type == "IPSetReferenceStatement":
+    elif statement.Match_Type == "IPSetReferenceStatement":
         config += f"""
             statement {{
                 {generate_ip_set_reference(statement.IPSetReference_Statement)}
             }}
         """
-    elif statement.Match_type == "LabelMatchStatement":
+    elif statement.Match_Type == "LabelMatchStatement":
         config += f"""
             statement {{
                 {generate_label_match(statement.LabelMatch_Statement)}
             }}
         """
-    elif statement.Match_type == "ByteMatchStatement":
+    elif statement.Match_Type == "ByteMatchStatement":
         config += f"""
             statement {{
                 {generate_byte_match(statement.ByteMatch_Statement)}
             }}
         """
-    elif statement.Match_type == "RegexPatternSetReferenceStatement":
+    elif statement.Match_Type == "RegexPatternSetReferenceStatement":
         config += f"""
             statement {{
                 {generate_regex_pattern_set_reference(statement.RegexPatternSetReference_Statement)}
             }}
         """
-    elif statement.Match_type == "RegexMatchStatement":
+    elif statement.Match_Type == "RegexMatchStatement":
         config += f"""
             statement {{
                 {generate_regex_match(statement.RegexMatch_Statement)}
             }}
         """
-    elif statement.Match_type == "SizeConstraintStatement":
+    elif statement.Match_Type == "SizeConstraintStatement":
         config += f"""
             statement {{
                 {generate_size_constraint(statement.SizeConstraint_Statement)}
             }}
         """
-    elif statement.Match_type == "SqliMatchStatement":
+    elif statement.Match_Type == "SqliMatchStatement":
         config += f"""
             statement {{
                 {generate_sqli_match(statement.SqliMatch_Statement)}
             }}
         """
-    elif statement.Match_type == "XssMatchStatement":
+    elif statement.Match_Type == "XssMatchStatement":
         config += f"""
             statement {{
                 {generate_xss_match(statement.XssMatch_Statement)}
             }}
         """
     else:
-        config += f"# Unsupported match type: {statement.Match_type}"
+        config += f"# Unsupported match type: {statement.Match_Type}"
     
     return config
 
@@ -671,11 +671,11 @@ def generate_not_statement(statement):
 
 def generate_or_statement(statement) :
     statement_num = int(statement.Statement_amount)
-    statement1 = statement.Selected_statement1
-    statement2 = statement.Selected_statement2
-    statement3 = statement.Selected_statement3
-    statement4 = statement.Selected_statement4
-    statement5 = statement.Selected_statement5
+    statement1 = statement.Selected_Statement1
+    statement2 = statement.Selected_Statement2
+    statement3 = statement.Selected_Statement3
+    statement4 = statement.Selected_Statement4
+    statement5 = statement.Selected_Statement5
     statement_list = [statement1, statement2, statement3, statement4, statement5] 
     config = ""
     for i in range(statement_num):
@@ -689,11 +689,11 @@ def generate_or_statement(statement) :
 
 def generate_and_statement(statement) :
     statement_num = int(statement.Statement_amount)
-    statement1 = statement.Selected_statement1
-    statement2 = statement.Selected_statement2
-    statement3 = statement.Selected_statement3
-    statement4 = statement.Selected_statement4
-    statement5 = statement.Selected_statement5
+    statement1 = statement.Selected_Statement1
+    statement2 = statement.Selected_Statement2
+    statement3 = statement.Selected_Statement3
+    statement4 = statement.Selected_Statement4
+    statement5 = statement.Selected_Statement5
     statement_list = [statement1, statement2, statement3, statement4, statement5] 
     config = ""
     for i in range(statement_num):
@@ -706,13 +706,13 @@ def generate_and_statement(statement) :
     return and_statement_config
 
 def generate_statement(statement_input):
-    statementType= statement_input.Statement_type
+    statementType= statement_input.Statement_Type
     statement = statement_input.Statement_Content
 
     if statementType == "MatchStatement":
-        config = generate_match_statement(statement.Match_Statement.Selected_statement)
+        config = generate_match_statement(statement.Match_Statement.Selected_Statement)
     elif statementType == "NotStatement":
-        config = generate_not_statement(statement.Not_Statement.Selected_statement)
+        config = generate_not_statement(statement.Not_Statement.Selected_Statement)
     elif statementType == "OrStatement":
         config = generate_or_statement(statement.Or_Statement)
     elif statementType == "AndStatement":

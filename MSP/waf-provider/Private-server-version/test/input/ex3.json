@@ -2,9 +2,9 @@
     "Resource": {
         "Type": "alb",
         "Region": "us-east-1",
-        "Resource_arn": "arn",
-        "Resource_id": "",
-        "Resource_name": ""
+        "Resource_Arn": "arn",
+        "Resource_Id": "",
+        "Resource_Name": ""
     },
     "Waf": {
         "Name": "name",
@@ -81,12 +81,12 @@
                     "Metric_Name": "name"
                 },
                 "Statement": {
-                    "Statement_type": "MatchStatement",
+                    "Statement_Type": "MatchStatement",
                     "Statement_Content": {
                         "Match_Statement": {
-                            "Statement_amount": 1,
-                            "Selected_statement": {
-                                "Match_type": "GeoMatchStatement",
+                            "Statement_Amount": 1,
+                            "Selected_Statement": {
+                                "Match_Type": "GeoMatchStatement",
                                 "GeoMatch_Statement": {
                                     "Country_Codes": [
                                         "AG",
@@ -119,12 +119,12 @@
                     "Metric_Name": "name"
                 },
                 "Statement": {
-                    "Statement_type": "NotStatement",
+                    "Statement_Type": "NotStatement",
                     "Statement_Content": {
                         "Not_Statement": {
-                            "Statement_amount": 1,
-                            "Selected_statement": {
-                                "Match_type": "ByteMatchStatement",
+                            "Statement_Amount": 1,
+                            "Selected_Statement": {
+                                "Match_Type": "ByteMatchStatement",
                                 "ByteMatch_Statement": {
                                     "Field_To_Match": {
                                         "Field": {
@@ -178,7 +178,7 @@
                             "Statement_amount": 2,
                             "Selected_statement1": {
                                 "Not": true,
-                                "Match_type": "SizeConstraintStatement",
+                                "Match_Type": "SizeConstraintStatement",
                                 "SizeConstraint_Statement": {
                                     "Field_To_Match": {
                                         "Field": {
@@ -196,7 +196,7 @@
                                 }
                             },
                             "Selected_statement2": {
-                                "Match_type": "SqliMatchStatement",
+                                "Match_Type": "SqliMatchStatement",
                                 "SqliMatch_Statement": {
                                     "Field_To_Match": {
                                         "Field": {

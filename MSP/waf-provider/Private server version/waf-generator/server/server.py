@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import os
 from datetime import datetime
 import re
+import traceback
 import terraform_generator
 
 # =================================== global data ==============================================================
@@ -95,27 +96,35 @@ def update_ip():
 def rule_ip():
     global last_updated
     global rules_data
+    new_data = None
 
     if request.method == 'POST':
         if not request.data:
             return jsonify({"message": "No data received", "status": "error"}), 400
         try:
             new_data = request.get_json()
-        except:
-            return jsonify({"message": "Error parsing JSON", "status": "error"}), 400
+        except Exception as e:
+            print(new_data)
+            return jsonify({"message": "Error parsing JSON", "error": str(e), "status": "error"}), 400
 
         if new_data:
-            #try:
-            terraform_generator.generate_terraform(new_data)
-            rules_data = new_data
-            return jsonify({
-                                "status": "success",
-                                "data": {
-                                    "deployedAt": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
-                                    }
-                                }), 200
-            #except:
-            #    return jsonify({"message": "Invalid rule format", "status": "error"}), 400
+            try:
+                terraform_generator.generate_terraform(new_data)
+                rules_data = new_data
+                return jsonify({
+                                    "status": "success",
+                                    "data": {
+                                        "deployedAt": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
+                                        }
+                                    }), 200
+            except Exception as e:
+                error_message = {
+                    "status": "error",
+                    "message": "An error occurred while generating Terraform",
+                    "error": str(e),
+                    "trace": traceback.format_exc()
+                }
+                return (jsonify(error_message)), 400
 
     elif request.method == 'GET':
         return jsonify({"data": rules_data}) # output all we have
@@ -128,7 +137,6 @@ def block_ip():
         # Get the JSON data from the request
         if not request.data:
             return jsonify({"message": "No data received", "status": "error"}), 400
-
         try:
             new_data = request.get_json()
         except:

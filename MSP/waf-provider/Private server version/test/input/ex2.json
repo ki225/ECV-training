@@ -2,9 +2,9 @@
     "Resource": {
         "Type": "alb",
         "Region": "global",
-        "Resource-id": "",
-        "Resource-arn": "",
-        "Resource-name": "kg-alb"
+        "Resource_id": "",
+        "Resource_arn": "",
+        "Resource_name": "kg-alb"
     },
     "Waf": {
         "Name": "name",
@@ -22,7 +22,7 @@
         }
     ],
     "Rules": {
-        "Rule_Package": [],
+        "Rule_Package": {},
         "Rule_Created": [
             {
                 "Name": "rule1",

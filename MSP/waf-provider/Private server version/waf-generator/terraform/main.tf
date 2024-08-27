@@ -140,7 +140,7 @@ resource "aws_instance" "flask_server" {
       #!/bin/bash
 
       sudo yum update -y
-      sudo yum remove python3
+      sudo yum remove python3 -y
       sudo amazon-linux-extras install python3.8
       sudo ln -s /usr/bin/python3.8 /usr/bin/python3
       sudo ln -s /usr/bin/pydoc3.8 /usr/bin/pydoc

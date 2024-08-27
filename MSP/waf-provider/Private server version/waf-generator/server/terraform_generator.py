@@ -135,7 +135,7 @@ class IPSetForwardedIPConfig(BaseModel):
 
 # inspect
 class FieldToMatch(BaseModel):
-    field: Union[
+    Field: Union[
         SingleHeader,
         Headers,
         Cookies,
@@ -193,6 +193,7 @@ class XssMatchStatement(BaseModel):
 
 class SelectedStatements(BaseModel):
     Match_type: str
+    Not: Optional[bool] = None
     GeoMatch_Statement: Optional[GeoMatchStatement] = None
     IPSetReference_Statement: Optional[IPSetReferenceStatement] = None
     LabelMatch_Statement: Optional[LabelMatchStatement] = None
@@ -219,7 +220,7 @@ StatementType = Union[
 ]
 
 class OrStatement(BaseModel):
-    Statement_amount: str
+    Statement_amount: int
     Selected_statement1: SelectedStatements
     Selected_statement2: SelectedStatements
     Selected_statement3: Optional[SelectedStatements] = None
@@ -237,7 +238,7 @@ class AndStatement(BaseModel):
 
 class NotStatement(BaseModel):
     # Selected_statement: SelectedStatements
-    Selected_statement: List[SelectedStatements] = Field(..., min_items=1)
+    Selected_statement: SelectedStatements
 
 # ------------------------- rate_type -------------------------
 
@@ -297,8 +298,11 @@ class CustomResponse(BaseModel):
     Response_Code: str
     Custom_Response_Body_Key: str
 
+class ImmunityTimeProperty(BaseModel):
+    Immunity_Time: str
+
 class CaptchaConfig(BaseModel):
-    Immunity_Time: int = Field(..., description="Immunity time in seconds")
+    Immunity_Time_Property: ImmunityTimeProperty
 
 # Action Models
 class BlockAction(BaseModel):
@@ -330,13 +334,13 @@ class Action(BaseModel):
 
 class xssRule(BaseModel):
     Rule_Id: str
-    Chosen: Literal["true", "false"]
-    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+    Chosen: bool
+    Action: Optional[Literal["block", "allow", "count", "Captcha", "Challenge"]]
 
-class aqliRule(BaseModel):
+class sqliRule(BaseModel):
     Rule_Id: str
-    Chosen: Literal["true", "false"]
-    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+    Chosen: bool
+    Action: Optional[Literal["block", "allow", "count", "Captcha", "Challenge"]]
 
 class XSS(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
@@ -344,14 +348,11 @@ class XSS(BaseModel):
 
 class SQLi(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
-    SQLi_Set: List[str]
+    SQLi_Set: List[sqliRule]
 
 class RulePackage(BaseModel):
-    Name: str
-    Sqli: Optional[SQLi]
-    Xss: Optional[XSS]
-
-
+    SQLi: Optional[SQLi]
+    XSS: Optional[XSS]
 
 # ======================================= Created Rule (customized rules) =======================================
 class VisibilityConfig(BaseModel):
@@ -374,18 +375,6 @@ class RuleLabel(BaseModel):
 
 # ======================================= IP Rule =======================================
 
-class RulePackage(BaseModel):
-    Name: str
-    Version: str
-    # Add other fields as necessary
-
-# class CreatedRule(BaseModel):
-#     Name: str
-#     Priority: int
-#     Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
-#     Visibility_config: VisibilityConfig
-#     Statement: Statements
-
 class Rule(BaseModel):
     Name: str
     Priority: int
@@ -394,8 +383,8 @@ class Rule(BaseModel):
     Statement: Statements
 
 class Rules(BaseModel):
-    Rule_Package: List = []
-    Rule_Created: List[Rule]
+    Rule_Package: Optional[RulePackage] = None
+    Rule_Created: Optional[List[Rule]] = None
 
 # ================================== Base ==================================
 
@@ -410,9 +399,9 @@ class Resource(BaseModel):
         "verifiedaccess"
     ]
     Region: str
-    Resource_id: str = Field(alias="Resource-id")
-    Resource_arn: str = Field(alias="Resource-arn")
-    Resource_name: str = Field(alias="Resource-name")
+    Resource_id: str 
+    Resource_arn: str 
+    Resource_name: str 
 
 class WAF(BaseModel):
     Name: str
@@ -549,6 +538,20 @@ def generate_byte_match(byte_match_statement):
 def generate_regex_pattern_set_reference(regex_pattern_set_statement):
     return f'regex_pattern_set_reference_statement {{ arn = "{regex_pattern_set_statement.ARN}" }}'
 
+def generate_regex_match(regex_match_statement):
+    return f"""
+        regex_match_statement {{
+            regex_string = "{regex_match_statement.RegexString}"
+            field_to_match {{
+                {regex_match_statement.FieldToMatch}
+            }}
+            text_transformation {{
+                priority = {regex_match_statement.TextTransformation.Priority}
+                type     = "{regex_match_statement.TextTransformation.Type}"
+            }}
+        }}
+    """
+
 def generate_size_constraint(size_constraint_statement):
     return f"""
         size_constraint_statement {{
@@ -597,46 +600,100 @@ def generate_text_transformation(text_transformation):
         type     = "{text_transformation.Type}"
     """
 
-def generate_match_statement(statement):
+def generate_match_statement(statement): # .Match_Statement.Selected_statement
     config = ""
     if statement.Match_type == "GeoMatchStatement":
         config += f"""
-                    statement {{
-                        {generate_geo(statement.GeoMatch_Statement)}
-                    }}
-                """
+            statement {{
+                {generate_geo(statement.GeoMatch_Statement)}
+            }}
+        """
+    elif statement.Match_type == "IPSetReferenceStatement":
+        config += f"""
+            statement {{
+                {generate_ip_set_reference(statement.IPSetReference_Statement)}
+            }}
+        """
     elif statement.Match_type == "LabelMatchStatement":
         config += f"""
             statement {{
                 {generate_label_match(statement.LabelMatch_Statement)}
             }}
         """
-        
+    elif statement.Match_type == "ByteMatchStatement":
+        config += f"""
+            statement {{
+                {generate_byte_match(statement.ByteMatch_Statement)}
+            }}
+        """
+    elif statement.Match_type == "RegexPatternSetReferenceStatement":
+        config += f"""
+            statement {{
+                {generate_regex_pattern_set_reference(statement.RegexPatternSetReference_Statement)}
+            }}
+        """
+    elif statement.Match_type == "RegexMatchStatement":
+        config += f"""
+            statement {{
+                {generate_regex_match(statement.RegexMatch_Statement)}
+            }}
+        """
+    elif statement.Match_type == "SizeConstraintStatement":
+        config += f"""
+            statement {{
+                {generate_size_constraint(statement.SizeConstraint_Statement)}
+            }}
+        """
+    elif statement.Match_type == "SqliMatchStatement":
+        config += f"""
+            statement {{
+                {generate_sqli_match(statement.SqliMatch_Statement)}
+            }}
+        """
+    elif statement.Match_type == "XssMatchStatement":
+        config += f"""
+            statement {{
+                {generate_xss_match(statement.XssMatch_Statement)}
+            }}
+        """
+    else:
+        config += f"# Unsupported match type: {statement.Match_type}"
+    
     return config
 
 def generate_not_statement(statement):
     not_statement_config = f"""
         not_statement {{
-            {generate_match_statement(statement.Not_Statement.Selected_statement)}
+            {generate_match_statement(statement)}
         }}
     """
     return not_statement_config
 
 def generate_or_statement(statement) :
+    statement_num = int(statement.Statement_amount)
+    statement1 = statement.Selected_statement1
+    statement2 = statement.Selected_statement2
+    statement3 = statement.Selected_statement3
+    statement4 = statement.Selected_statement4
+    statement5 = statement.Selected_statement5
+    statement_list = [statement1, statement2, statement3, statement4, statement5] 
+    config = ""
+    for i in range(statement_num):
+        config += f"{generate_match_statement(statement_list[i])}\n"
     or_statement_config = f"""
         or_statement {{
-            {generate_match_statement(statement.Or_Statement.Selected_statement)}
+            {config}
         }}
     """
     return or_statement_config
 
 def generate_and_statement(statement) :
-    statement_num = int(statement.And_Statement.Statement_amount)
-    statement1 = statement.And_Statement.Selected_statement1
-    statement2 = statement.And_Statement.Selected_statement2
-    statement3 = statement.And_Statement.Selected_statement3
-    statement4 = statement.And_Statement.Selected_statement4
-    statement5 = statement.And_Statement.Selected_statement5
+    statement_num = int(statement.Statement_amount)
+    statement1 = statement.Selected_statement1
+    statement2 = statement.Selected_statement2
+    statement3 = statement.Selected_statement3
+    statement4 = statement.Selected_statement4
+    statement5 = statement.Selected_statement5
     statement_list = [statement1, statement2, statement3, statement4, statement5] 
     config = ""
     for i in range(statement_num):
@@ -652,15 +709,14 @@ def generate_statement(statement_input):
     statementType= statement_input.Statement_type
     statement = statement_input.Statement_Content
 
-
     if statementType == "MatchStatement":
-        config = generate_match_statement(statement)
+        config = generate_match_statement(statement.Match_Statement.Selected_statement)
     elif statementType == "NotStatement":
-        config = generate_not_statement(statement)
+        config = generate_not_statement(statement.Not_Statement.Selected_statement)
     elif statementType == "OrStatement":
-        config = generate_or_statement(statement)
+        config = generate_or_statement(statement.Or_Statement)
     elif statementType == "AndStatement":
-        config = generate_and_statement(statement)
+        config = generate_and_statement(statement.And_Statement)
     elif statementType == "RateBasedStatement":
         config = generate_rate_based_statement(statement)
     else:

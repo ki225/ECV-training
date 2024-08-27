@@ -19,3 +19,6 @@ To address this, our service provides different solutions to meet various custom
 
 **Scenario 5:**
 For enterprises unfamiliar with cloud environments, our service offers a straightforward interactive interface and uses APIs as the interface for firewall setup. Customers only need to focus on how to call the API and handle the results, without worrying about complex implementation details. This allows even non-technical personnel to use and integrate these features, providing enhanced protection for their cloud environment.
+
+## Architecture
+![](img/front-end.drawio.png)

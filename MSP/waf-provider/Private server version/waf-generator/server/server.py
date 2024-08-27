@@ -7,7 +7,7 @@ import terraform_generator
 # =================================== global data ==============================================================
 server = Flask(__name__)
 ip_regex = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
-rules_data = {}
+rules_data = None
 blocked_ips = []
 reasons = []
 last_updated = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
@@ -25,19 +25,15 @@ def health_check():
 # PUT
 @server.route('/v1/waf/rules', methods=['PUT'])
 def update_rules():
-    # Get the JSON data from the request
     if not request.data:
         return jsonify({"message": "No data received", "status": "error"}), 400
-
     try:
         recv_data = request.get_json()
     except:
         return jsonify({"message": "Error parsing JSON", "status": "error"}), 400
 
-    # Validate the data
-    if not all(key in recv_data for key in ('accountId', 'rulesToUpdate')):
-        return jsonify({"message": "Error parsing data", "status": "error"}), 400
-
+    # ========================  Validate the data =============================
+    
     for key, val in recv_data.items():
         print(key, val)
         if key == 'accountId' and not match_regex(str(val), r'\d{12}') :
@@ -98,6 +94,7 @@ def update_ip():
 @server.route('/v1/waf/rules', methods=['GET', 'POST'])
 def rule_ip():
     global last_updated
+    global rules_data
 
     if request.method == 'POST':
         if not request.data:
@@ -108,69 +105,17 @@ def rule_ip():
             return jsonify({"message": "Error parsing JSON", "status": "error"}), 400
 
         if new_data:
-            # Delete rules
-            if 'rulesToDelete' in new_data:
-                # Validate the data
-                if not all(key in new_data for key in ('accountId', 'rulesToDelete')):
-                    return jsonify({"message": "Error parsing data", "status": "error"}), 400
-
-                for key, val in new_data.items():
-                    print(key, val)
-                    if key == 'accountId' and not match_regex(str(val), r'\d{12}') :
-                        return jsonify({"message": "Error parsing accountid", "status": "error"}), 400
-
-                    elif key == 'rulesToDelete':
-                        for rule_id in val:
-                            if not match_regex(str(rule_id), r'0|[1-9]\d*'):
-                                return jsonify({"message": "Error parsing rule ids", "status": "error"}), 400
-                            # delete
-                            rules_dict = rules_data[new_data["accountId"]]
-                            del rules_dict[rule_id]
-
-                # Successful process
-                success_responce = {
-                    "status": "success",
-
-                    "data": {
-                      **new_data,
-                      "DeletedAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-                    }
-                }
-                tf = terraform_generator.generate_terraform(new_data) # call function for building terraform file
-                output_file_path = os.path.join("terraform", "main.tf")
-                with open(output_file_path, 'w') as f:
-                    f.write(tf)
-
-                print(f"Terraform code has been written to {output_file_path}")
-
-                tmpdir = os.getcwd()
-                print(tf)
-                return jsonify(success_responce), 200
-
-            # Deploy rules
-            elif 'rulesToDeploy' in new_data:
-                account_id = new_data["accountId"]
-                if account_id in rules_data:
-                    rules_dict = rules_data[account_id]
-                else:
-                    rules_dict = {}
-                for rule in new_data["rulesToDeploy"]:
-                    rules_dict[rule["id"]] = rule["action"]
-
-                rules_data[account_id] = rules_dict
-
-                # output what we got
-                return jsonify({
+            #try:
+            terraform_generator.generate_terraform(new_data)
+            rules_data = new_data
+            return jsonify({
                                 "status": "success",
                                 "data": {
-                                    "accountId": new_data["accountId"],
-                                    "rulesToDeploy": new_data["rulesToDeploy"],
                                     "deployedAt": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
                                     }
                                 }), 200
-            else: jsonify({"message": "Header missing", "status": "error"}), 400
-        else:
-            return jsonify({"message": "Invalid rule format", "status": "error"}), 400
+            #except:
+            #    return jsonify({"message": "Invalid rule format", "status": "error"}), 400
 
     elif request.method == 'GET':
         return jsonify({"data": rules_data}) # output all we have

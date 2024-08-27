@@ -4,7 +4,7 @@ from typing import List, Literal, Optional, Union, Dict, Any
 import json
 import os
 from pydantic import TypeAdapter
-from terraform_executor import execute_terraform
+# from terraform_executor import execute_terraform
 
 # ------------------------- AggregateKeyType -------------------------
 class TextTransformation(BaseModel):
@@ -649,7 +649,88 @@ def generate_statement(statement_input):
 
 if __name__ == '__main__':
     config = """
-
+    {
+    "Resource": {
+        "Type": "alb",
+        "Region": "global",
+        "Resource-id": "",
+        "Resource-arn": "",
+        "Resource-name": "kg-alb"
+    },
+    "Waf": {
+        "Name": "name",
+        "Description": "string",
+        "Inspection": "16KB"
+    },
+    "Monitor_Settings": {
+        "CW_Metric_Name": "string",
+        "Option": ""
+    },
+    "IP": [
+        {
+            "Action": "block",
+            "CIDR": "10.0.0.0/24"
+        }
+    ],
+    "Rules": {
+        "Rule_Package": [],
+        "Rule_Created": [
+            {
+                "Name": "rule1",
+                "Priority": 0,
+                "Action": {
+                    "Block": {
+                        "Custom_Response": {
+                            "Response_Headers": [
+                                {
+                                    "Name": "sd",
+                                    "Value": "ff"
+                                }
+                            ],
+                            "Response_Code": "501",
+                            "Custom_Response_Body_Key": "ddd"
+                        }
+                    }
+                },
+                "Visibility_config": {
+                    "Sampled_Requests_Enabled": true,
+                    "CloudWatch_Metrics_Enabled": true,
+                    "Metric_Name": "matrice"
+                },
+                "Statement": {
+                    "Statement_type": "AndStatement",
+                    "Statement_Content": {
+                        "And_Statement": {
+                            "Statement_amount": "2",
+                            "Selected_statement1": {
+                                
+                                    "Match_type": "GeoMatchStatement",
+                                    "GeoMatch_Statement": {
+                                        "Country_Codes": [
+                                            "TW"
+                                        ]
+                                    }
+                                
+                                
+                            },
+                            "Selected_statement2": {
+                                "Match_type": "LabelMatchStatement",
+                                "LabelMatch_Statement": {
+                                    "Scope": "NAMESPACE",
+                                    "Key": "awswaf:111122223333:rulegroup:testRules:namespace1:namespace2:"
+                                }      
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+    },
+    "Rule_Prioritization": {
+        "description": "",
+        "order": []
+    }
+}
     """
 
     tf = generate_terraform(config)
@@ -658,6 +739,3 @@ if __name__ == '__main__':
         f.write(tf)
 
     print(f"Terraform code has been written to {output_file_path}")
-
-    tmpdir = os.getcwd()
-    result, output = execute_terraform(tmpdir)

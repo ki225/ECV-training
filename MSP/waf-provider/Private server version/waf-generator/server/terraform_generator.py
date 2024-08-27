@@ -1,9 +1,9 @@
 # BaseModel is for some functions like validation, it is optional in every class
-from pydantic import BaseModel, Field, RootModel 
+from pydantic import BaseModel, Field, RootModel, TypeAdapter 
 from typing import List, Literal, Optional, Union, Dict, Any
 import json
 import os
-from pydantic import TypeAdapter
+# from terraform_executor import execute_terraform
 
 # ------------------------- AggregateKeyType -------------------------
 class TextTransformation(BaseModel):
@@ -133,8 +133,8 @@ class IPSetForwardedIPConfig(BaseModel):
     Fallback_Behavior: Literal["MATCH", "NO_MATCH"]
     Position: Literal["FIRST", "LAST", "ANY"]
 
+# inspect
 class FieldToMatch(BaseModel):
-    # inspect
     field: Union[
         SingleHeader,
         Headers,
@@ -327,6 +327,32 @@ class Action(BaseModel):
 
 # ======================================= Rule Package =======================================
 
+
+class xssRule(BaseModel):
+    Rule_Id: str
+    Chosen: Literal["true", "false"]
+    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+
+class aqliRule(BaseModel):
+    Rule_Id: str
+    Chosen: Literal["true", "false"]
+    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+
+class XSS(BaseModel):
+    Mode: Optional[Literal["disable", "default", "test", "advanced"]]
+    XSS_Set: List[xssRule]
+
+class SQLi(BaseModel):
+    Mode: Optional[Literal["disable", "default", "test", "advanced"]]
+    SQLi_Set: List[str]
+
+class RulePackage(BaseModel):
+    Name: str
+    Sqli: Optional[SQLi]
+    Xss: Optional[XSS]
+
+
+
 # ======================================= Created Rule (customized rules) =======================================
 class VisibilityConfig(BaseModel):
     Sampled_Requests_Enabled: bool = Field(default=True)
@@ -414,12 +440,11 @@ class WAFConfig(BaseModel):
 
 # =========================================== functions ============================================
 
-def generate_terraform(config: str) -> str:
-    config_data = json.loads(config)
-    print(config_data)
-    waf_config = TypeAdapter(WAFConfig).validate_python(config_data)
+def generate_terraform(config: json) -> str:
+    # config_data = json.loads(config)
+    waf_config = TypeAdapter(WAFConfig).validate_python(config)
 
-    customer_credential = ""   # IAM role ARN
+    customer_credential = "arn:aws:iam::812428033092:role/kg-terraform-role"   # IAM role ARN
 
     terraform_config = f"""
     # AWS Provider
@@ -470,8 +495,7 @@ def generate_rule(rule: Rule) -> str:
         }}
       }}
     """
-    print("==============================")
-    print(rule_config)
+
     return rule_config
 
 
@@ -575,18 +599,13 @@ def generate_text_transformation(text_transformation):
 
 def generate_match_statement(statement):
     config = ""
-    print()
-    print(statement)
     if statement.Match_type == "GeoMatchStatement":
-        print()
-        print(statement.GeoMatch_Statement)
         config += f"""
                     statement {{
                         {generate_geo(statement.GeoMatch_Statement)}
                     }}
                 """
     elif statement.Match_type == "LabelMatchStatement":
-        print(statement.LabelMatch_Statement)
         config += f"""
             statement {{
                 {generate_label_match(statement.LabelMatch_Statement)}
@@ -613,7 +632,6 @@ def generate_or_statement(statement) :
 
 def generate_and_statement(statement) :
     statement_num = int(statement.And_Statement.Statement_amount)
-    print(statement_num)
     statement1 = statement.And_Statement.Selected_statement1
     statement2 = statement.And_Statement.Selected_statement2
     statement3 = statement.And_Statement.Selected_statement3
@@ -631,12 +649,8 @@ def generate_and_statement(statement) :
     return and_statement_config
 
 def generate_statement(statement_input):
-    print()
-    print(statement_input)
-    print("===============================================")
     statementType= statement_input.Statement_type
     statement = statement_input.Statement_Content
-    print(statement)
 
 
     if statementType == "MatchStatement":
@@ -652,102 +666,4 @@ def generate_statement(statement_input):
     else:
         config = f"# Unsupported statement type: {statementType}"
 
-    print(config)
     return config
-
-
-# =================================================== test ================================================
-
-
-if __name__ == '__main__':
-    config = """
-{
-    "Resource": {
-        "Type": "alb",
-        "Region": "global",
-        "Resource-id": "",
-        "Resource-arn": "",
-        "Resource-name": "kg-alb"
-    },
-    "Waf": {
-        "Name": "name",
-        "Description": "string",
-        "Inspection": "16KB"
-    },
-    "Monitor_Settings": {
-        "CW_Metric_Name": "string",
-        "Option": ""
-    },
-    "IP": [
-        {
-            "Action": "block",
-            "CIDR": "10.0.0.0/24"
-        }
-    ],
-    "Rules": {
-        "Rule_Package": [],
-        "Rule_Created": [
-            {
-                "Name": "rule1",
-                "Priority": 0,
-                "Action": {
-                    "Block": {
-                        "Custom_Response": {
-                            "Response_Headers": [
-                                {
-                                    "Name": "sd",
-                                    "Value": "ff"
-                                }
-                            ],
-                            "Response_Code": "501",
-                            "Custom_Response_Body_Key": "ddd"
-                        }
-                    }
-                },
-                "Visibility_config": {
-                    "Sampled_Requests_Enabled": true,
-                    "CloudWatch_Metrics_Enabled": true,
-                    "Metric_Name": "matrice"
-                },
-                "Statement": {
-                    "Statement_type": "AndStatement",
-                    "Statement_Content": {
-                        "And_Statement": {
-                            "Statement_amount": "2",
-                            "Selected_statement1": {
-                                
-                                    "Match_type": "GeoMatchStatement",
-                                    "GeoMatch_Statement": {
-                                        "Country_Codes": [
-                                            "TW"
-                                        ]
-                                    }
-                                
-                                
-                            },
-                            "Selected_statement2": {
-                                "Match_type": "LabelMatchStatement",
-                                "LabelMatch_Statement": {
-                                    "Scope": "NAMESPACE",
-                                    "Key": "awswaf:111122223333:rulegroup:testRules:namespace1:namespace2:"
-                                }      
-                            }
-                        }
-                    }
-                }
-            }
-        ]
-    },
-    "Rule_Prioritization": {
-        "description": "",
-        "order": []
-    }
-}
-    """
-
-    tf = generate_terraform(config)
-    output_file_path = os.path.join("terraform", "main.tf")
-    with open(output_file_path, 'w') as f:
-        f.write(tf)
-
-    print(f"Terraform code has been written to {output_file_path}")

@@ -167,12 +167,16 @@ resource "aws_instance" "flask_server" {
   tags = {
     Name = "App Server"
   }
+  // update python to be 3.8 so that we can use "from typing import List, Literal, Optional, Union, Dict, Any"
+  // https://repost.aws/questions/QUtA3qNBaLSvWPfD5kFwI0_w/python-3-10-on-ec2-running-amazon-linux-2-and-the-openssl-upgrade-requirement
   user_data = <<-EOF
       #!/bin/bash
 
-      sudo apt-get update -y
-      sudo apt-get install -y python3 python3-pip
-
+      sudo yum update -y
+      sudo yum install -y python3 python3-pip
+      sudo pip3 install pydantic
+      sudo yum update -y
+      sudo amazon-linux-extras install python3.8
       pip3 install flask
 
       cat <<EOT > /home/ec2-user/server.py

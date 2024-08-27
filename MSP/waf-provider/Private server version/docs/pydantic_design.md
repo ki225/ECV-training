@@ -14,11 +14,6 @@ class WAFConfig(BaseModel):
     Rules: Rules
     Rule_Prioritization: RulePrioritization
 
-
-    Monitor_Settings: MonitorSettings
-    IP: List[IPRule]
-    Rules: Rules
-    Rule_Prioritization: RulePrioritization
 ```
 
 - resource: What kind of resource the WAF to build upon.
@@ -60,6 +55,51 @@ class IPRule(BaseModel):
 class RulePrioritization(BaseModel):
     pass
 ```
+
+## Basic structure of a rule packages data format
+For rule package part, it might contain several types of rules, such as SQL injection, XSS and CSRF. The following are all the options we provide:
+- SQLi
+- XSS
+
+```py
+class RulePackage(BaseModel):
+    Sqli: Optional[SQLi]
+    Xss: Optional[XSS]
+```
+For each security aspect, it has the following information:
+- mode: customer's level
+- set: the rules we provide for preventing particular attack.
+
+```py
+class XSS(BaseModel):
+    Mode: Optional[Literal["disable", "default", "test", "advanced"]]
+    XSS_Set: List[xssRule]
+
+class SQLi(BaseModel):
+    Mode: Optional[Literal["disable", "default", "test", "advanced"]]
+    SQLi_Set: List[str]
+```
+
+
+For each set, it contains multiple choices of rules for customers. For each rule, it includes the following information:
+- rule id
+- chosem: whether it is chosen or not
+- action: the action we use for that single rule
+
+```py
+class xssRule(BaseModel):
+    Rule_Id: str
+    Chosen: Literal["true", "false"]
+    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+
+class aqliRule(BaseModel):
+    Rule_Id: str
+    Chosen: Literal["true", "false"]
+    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+
+```
+
+
 
 ## Basic structure of a custom rule data format
 In this part, we use the Rules Class to get all the customized rules.

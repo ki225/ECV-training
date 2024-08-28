@@ -1,0 +1,10 @@
+[
+    {
+        "Name": "SQLi-rule1",
+        "Rule_Id": "sqli-r1",
+        "Chosen": false,
+        "Action": "",
+        "Rule_Configuration": "test"
+        
+    }
+]

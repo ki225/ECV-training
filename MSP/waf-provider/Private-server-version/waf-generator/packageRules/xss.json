@@ -1,0 +1,20 @@
+[
+    {
+        "Name": "xss-rule1",
+        "Rule_Id": "xss-r1",
+        "Chosen": false,
+        "Action": "",
+        "Rule_Configuration": {
+            "": "test"
+        }
+    },
+    {
+        "Name": "xss-rule2",
+        "Rule_Id": "xss-r2",
+        "Chosen": false,
+        "Action": "",
+        "Rule_Configuration": {
+            "": "test"
+        }
+    }
+]

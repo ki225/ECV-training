@@ -109,14 +109,19 @@ def rule_ip():
 
         if new_data:
             try:
-                terraform_generator.generate_terraform(new_data)
-                rules_data = new_data
-                return jsonify({
+                rules_data = terraform_generator.generate_terraform(new_data)
+                try:
+                    with open("terraform/main.tf", 'w') as file:
+                        file.write(rules_data)
+                        return jsonify({
                                     "status": "success",
                                     "data": {
                                         "deployedAt": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
                                         }
                                     }), 200
+                except:
+                    print("Error writing terraform file")
+                
             except Exception as e:
                 error_message = {
                     "status": "error",

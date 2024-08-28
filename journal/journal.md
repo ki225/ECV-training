@@ -429,7 +429,7 @@ Tasks:
     - use python version later than 3.8
         - https://repost.aws/questions/QUtA3qNBaLSvWPfD5kFwI0_w/python-3-10-on-ec2-running-amazon-linux-2-and-the-openssl-upgrade-requirement
 
-Unresolved Challenges:
+To-Do:
 - modify the json test and send it from API gateway to server 
 - find more regex
 - modify the server.py
@@ -439,6 +439,7 @@ Unresolved Challenges:
 Tasks:
 - make front-end send API request to back-end server and build file successfully 
 
-Unresolved Challenges:
+To-Do:
 - find more regex
 - test whether the terraform file can execute successfully
+- add priority part

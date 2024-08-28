@@ -1,0 +1,81 @@
+{
+    "Resource": {
+        "Type": "alb",
+        "Region": "us-east-1",
+        "Resource_Arn": "ddd",
+        "Resource_Id": "",
+        "Resource_Name": ""
+    },
+    "Waf": {
+        "Name": "ddd",
+        "Description": "ddd",
+        "Inspection": "48KB"
+    },
+    "Monitor_Settings": {
+        "CW_Metric_Name": "dddd",
+        "Option": "enable"
+    },
+    "IP": [],
+    "Rules": {
+        "Rule_Package": {
+            "SQLi_Package": {
+                "Mode": "advanced",
+                "SQLi_Set": [
+                    {
+                        "Rule_Id": "sqli-r1",
+                        "Chosen": false,
+                        "Action": "Count",
+                        "Priority": 1
+                    },
+                    {
+                        "Rule_Id": "sqli-r2",
+                        "Chosen": true,
+                        "Action": "Block",
+                        "Priority": 2
+                    },
+                    {
+                        "Rule_Id": "sqli-r3",
+                        "Chosen": true,
+                        "Action": "Captcha",
+                        "Priority": 3
+                    }
+                ]
+            }
+        },
+        "Rule_Created": [
+            {
+                "Name": "ffff",
+                "Priority": 7,
+                "Action": {
+                    "Captcha": {}
+                },
+                "Visibility_Config": {
+                    "Sampled_Requests_Enabled": true,
+                    "CloudWatch_Metrics_Enabled": true,
+                    "Metric_Name": "dddd"
+                },
+                "Statement": {
+                    "Statement_Type": "MatchStatement",
+                    "Statement_Content": {
+                        "Match_Statement": {
+                            "Statement_Amount": 1,
+                            "Selected_Statement": {
+                                "Match_Type": "GeoMatchStatement",
+                                "GeoMatch_Statement": {
+                                    "Country_Codes": [
+                                        "BD"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "Captcha_Config": {
+                    "Immunity_Time_Property": {
+                        "Immunity_Time": "3030"
+                    }
+                }
+            }
+        ]
+    }
+}

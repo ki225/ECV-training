@@ -14,25 +14,34 @@ class TextTransformation(BaseModel):
     Priority: int
 
 class QueryStringKey(BaseModel):
-    Query_String: Dict[Literal["TextTransformations"], List[TextTransformation]]
+    # Query_String: Dict[Literal["TextTransformations"], List[TextTransformation]]
+    Text_Transformations: List[TextTransformation]
 
 class QueryArgumentKey(BaseModel):
-    Query_Argument: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    # Query_Argument: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    Name: str
+    Text_Transformations: List[TextTransformation]
 
 class LabelNamespaceKey(BaseModel):
     Label_Namespace: Dict[Literal["Namespace"], str]
 
 class HeaderKey(BaseModel):
-    Header: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    # Header: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    Name: str
+    Text_Transformations: List[TextTransformation]
 
 class HTTPMethodKey(BaseModel):
     HTTP_Method: Dict
 
 class UriPathKey(BaseModel):
-    Uri_Path: Dict[Literal["TextTransformations"], List[TextTransformation]]
+    # Uri_Path: Dict[Literal["TextTransformations"], List[TextTransformation]]
+    Name: str
+    Text_Transformations: List[TextTransformation]
 
 class CookieKey(BaseModel):
-    Cookie: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    # Cookie: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    Name: str
+    Text_Transformations: List[TextTransformation]
 
 Aggregation_Key = Union[
     QueryStringKey,
@@ -47,7 +56,6 @@ Aggregation_Key = Union[
 # ------------------------------------------ Inspect module ------------------------------------
 class SingleHeader(BaseModel):
     Name : str
-    # Single_Header: Dict[Literal["Name"], str]
 
 class MatchPattern(BaseModel):
     All: Optional[Dict] = None
@@ -69,7 +77,6 @@ class Cookies(BaseModel):
 
 class SingleQueryArgument(BaseModel):
     Name: str
-    # Single_Query_Argument: Dict[Literal["Name"], str]
 
 class AllQueryArguments(BaseModel):
     pass
@@ -152,7 +159,7 @@ class FieldToMatch(BaseModel):
 
 class IPSetReferenceStatement(BaseModel):
     ARN: str
-    IPSet_forwarded_IP_config: Optional[IPSetForwardedIPConfig] = None #  originIp-ipHeader needs
+    IPSet_forwarded_IP_Config: Optional[IPSetForwardedIPConfig] = None #  originIp-ipHeader needs
 
 class LabelMatchStatement(BaseModel):
     Scope: Literal["LABEL", "NAMESPACE"]
@@ -228,8 +235,7 @@ class OrStatement(BaseModel):
     Selected_Statement5: Optional[SelectedStatements] = None
 
 class AndStatement(BaseModel):
-    Statement_Amount: str
-    # Selected_Statement: List[Selected_Statements]
+    Statement_Amount: int
     Selected_Statement1: SelectedStatements
     Selected_Statement2: SelectedStatements
     Selected_Statement3: Optional[SelectedStatements] = None
@@ -237,7 +243,6 @@ class AndStatement(BaseModel):
     Selected_Statement5: Optional[SelectedStatements] = None
 
 class NotStatement(BaseModel):
-    # Selected_Statement: SelectedStatements
     Selected_Statement: SelectedStatements
 
 # ------------------------- rate_type -------------------------
@@ -335,12 +340,14 @@ class Action(BaseModel):
 class xssRule(BaseModel):
     Rule_Id: str
     Chosen: bool
-    Action: Optional[Literal["block", "allow", "count", "Captcha", "Challenge"]]
+    Action: Optional[Literal["Block", "Allow", "Count", "Captcha", "Challenge"]]
+    Priority: int
 
 class sqliRule(BaseModel):
     Rule_Id: str
     Chosen: bool
-    Action: Optional[Literal["block", "allow", "count", "Captcha", "Challenge"]]
+    Action: Optional[Literal["Block", "Allow", "Count", "Captcha", "Challenge"]]
+    Priority: int
 
 class XSS(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
@@ -351,11 +358,11 @@ class SQLi(BaseModel):
     SQLi_Set: List[sqliRule]
 
 class RulePackage(BaseModel):
-    SQLi: Optional[SQLi]
-    XSS: Optional[XSS]
+    SQLi_Package: Optional[SQLi] = None
+    XSS_Package: Optional[XSS] = None
 
 # ======================================= Created Rule (customized rules) =======================================
-class VisibilityConfig(BaseModel):
+class VisibilityConfig(BaseModel): 
     Sampled_Requests_Enabled: bool = Field(default=True)
     CloudWatch_Metrics_Enabled: bool = Field(default=True)
     Metric_Name: str = Field(..., description="The name created in monitor field of the form")
@@ -370,8 +377,8 @@ class Statements(BaseModel):
     Statement_Type: Literal["MatchStatement","NotStatement","OrStatement","AndStatement"]
     Statement_Content: StatementContent
 
-class RuleLabel(BaseModel):
-    Key: str
+class RuleLabel(BaseModel): 
+    Key: str 
 
 # ======================================= IP Rule =======================================
 
@@ -416,8 +423,15 @@ class IPRule(BaseModel):
     Action: str
     CIDR: str
 
-class RulePrioritization(BaseModel):
-    pass
+# class RuleInfo(BaseModel):
+#     Name: str
+#     Id: int
+#     Priority: int
+
+# class RulePrioritization(BaseModel):
+#     Description: str
+#     Order: list[RuleInfo]
+
 
 class WAFConfig(BaseModel):
     Resource: Resource
@@ -425,7 +439,7 @@ class WAFConfig(BaseModel):
     Monitor_Settings: MonitorSettings
     IP: List[IPRule]
     Rules: Rules
-    Rule_Prioritization: RulePrioritization
+    # Rule_Prioritization: RulePrioritization
 
 # =========================================== functions ============================================
 
@@ -435,6 +449,7 @@ def generate_terraform(config: json) -> str:
 
     customer_credential = "arn:aws:iam::812428033092:role/kg-terraform-role"   # IAM role ARN
 
+    
     terraform_config = f"""
     # AWS Provider
     provider "aws" {{
@@ -450,6 +465,11 @@ def generate_terraform(config: json) -> str:
       description = "{waf_config.Waf.Description}"
       scope       = "{'CLOUDFRONT' if waf_config.Resource.Type.upper() == 'CLOUDFRONT' else 'REGIONAL'}"
 
+    resource "aws_wafv2_web_acl_association" "waf_association" {{
+        provider = aws.customer
+        resource_arn = {waf_config.Resource.Resource_Arn}
+        web_acl_arn  = aws_wafv2_web_acl.{waf_config.Waf.Name}.arn
+    }}
 
     default_action {{
         allow {{}}
@@ -460,15 +480,95 @@ def generate_terraform(config: json) -> str:
     """
     return terraform_config
 
-def generate_rules(rules: Dict[str, List[Rule]]) -> str:
+
+cate_dict = {"SQLi_Package": "SQLi_Set", "XSS_Package": "XSS_Set"}
+def generate_rules(rules) -> str:
     all_rules = []
     for rule in rules.Rule_Created:
-        all_rules.append(generate_rule(rule))
+        all_rules.append(generate_cus_rule(rule))
         # all_rules.extend(generate_rule(rule) for rule in rule_list)
+    for category, set_name in cate_dict.items():
+        try:
+            if hasattr(rules.Rule_Package, category):
+                category_obj = getattr(rules.Rule_Package, category)
+                category_obj = category_obj.dict()
+                print(1)
+
+                rule_set = category_obj[set_name]
+                for rule in rule_set:
+
+                    result = generate_package_rule(rule)
+
+                    if result: # prevent empty result
+                        all_rules.append(result)
+
+                    # rule_set = getattr(category_obj, set_name)
+                    # print(rule_set)
+                # else:
+                    # print(f"{category} or {set_name} not found in Rule_Package")
+            else:
+                print(f"{category} not found in Rule_Package")
+        except:
+            print(f"{category} not found in Rule_Package")
+            print(all_rules)
+            continue
+        # set_name = f"{category}_set"
+
+        # for rule in rules.Rule_Package[category][set_name]:
+        #     print(rule)
+        #     all_rules.append(generate_package_rule(rule))
+    # for rule in rules.Rule_Package:
+    #     print(type(rule))
+    #     print(rule)
+    #     print()
+    #     all_rules.append(generate_package_rule(rule))
+    print(all_rules)
+    print("\n".join(all_rules))
     return "\n".join(all_rules)
 
-def generate_rule(rule: Rule) -> str:
+rules_categories = ["SQLi", "XSS"]
+def generate_package_rule(target_rule):
+    ruleid = str(target_rule["Rule_Id"])
+    index = ruleid.find("-")
+    priority = target_rule["Priority"]
 
+    file_path = f"packageRules/{ruleid[:index]}.json"
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+        
+            for rule in data:
+                if rule["Rule_Id"] == target_rule["Rule_Id"]:
+                    # print()
+                    # print(rule["Rule_Configuration"])
+                    return rule["Rule_Configuration"]
+        # for rule in data.values():            
+        #     if rule["Rule_Id"] == target_rule["Rule_Id"]: 
+        #         rule_conf = rule["RuleConfiguration"] 
+        #         break
+        # return rule_conf
+
+        # parts = rule_conf.split("priority =")
+        # if len(parts) > 1:
+        #     before_priority = parts[0]
+        #     after_priority = parts[1].split("}", 1)[1]
+        #     modified_rule = f"{before_priority}\npriority = {priority}\n{after_priority}"
+        #     return modified_rule
+        # else:
+        #     print(f"Error: The rule '{target_rule.Rule_Id}' was not found in the '{file_path}' file.")
+        #     return None
+    
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+        return None
+    except json.JSONDecodeError:
+        print(f"Error: The file '{file_path}' does not contain valid JSON.")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
+        return None
+    
+def generate_cus_rule(rule: Rule) -> str:
     rule_config = f"""
       rule {{
         name     = "{rule.Name}"
@@ -486,25 +586,39 @@ def generate_rule(rule: Rule) -> str:
     """
 
     return rule_config
-
+ 
 
 def generate_action(action: Action) -> str:
+    # terraform require nested block to be in multiline
     if action.Block:
-        return "action { block {} }"
+        return """action { 
+                    block {{}} 
+                }"""
     elif action.Allow:
-        return "action { allow {} }"
+        return """action { 
+                        allow {{}} 
+                    }"""
     elif action.Count:
-        return "action { count {} }"
+        return """action { 
+                        count {{}} 
+                    }"""
     elif action.Captcha:
-        return "action { captcha {} }"
+        return """action { 
+                        captcha {{}} 
+                    }"""
     elif action.Challenge:
-        return "action { challenge {} }"
+        return """action { 
+                        challenge {{}} 
+                    }"""
     else:
         return "# Unknown action type"
 
 # ---------------------------------- statement ----------------------------------------------------
 def generate_geo(geo_statement):
-    return f"geo_match_statement {{ country_codes = { geo_statement.Country_Codes} }}"
+    # terraform only allow double quotes around country code
+    return f"geo_match_statement {{ country_codes = [{ ', '.join(f'"{code}"' for code in geo_statement.Country_Codes) }] }}"
+
+
 
 def generate_rate_based_statement(rate_based_statement):
     return f"""
@@ -670,7 +784,7 @@ def generate_not_statement(statement):
     return not_statement_config
 
 def generate_or_statement(statement) :
-    statement_num = int(statement.Statement_amount)
+    statement_num = int(statement.Statement_Amount)
     statement1 = statement.Selected_Statement1
     statement2 = statement.Selected_Statement2
     statement3 = statement.Selected_Statement3
@@ -688,7 +802,7 @@ def generate_or_statement(statement) :
     return or_statement_config
 
 def generate_and_statement(statement) :
-    statement_num = int(statement.Statement_amount)
+    statement_num = int(statement.Statement_Amount)
     statement1 = statement.Selected_Statement1
     statement2 = statement.Selected_Statement2
     statement3 = statement.Selected_Statement3

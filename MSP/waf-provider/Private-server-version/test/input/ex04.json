@@ -1,0 +1,99 @@
+{
+    "Resource": {
+        "Type": "alb",
+        "Region": "us-east-1",
+        "Resource_Arn": "qqq",
+        "Resource_Id": "",
+        "Resource_Name": ""
+    },
+    "Waf": {
+        "Name": "qqq",
+        "Description": "qqq",
+        "Inspection": "16KB"
+    },
+    "Monitor_Settings": {
+        "CW_Metric_Name": "qqq",
+        "Option": "disable"
+    },
+    "IP": [],
+    "Rules": {
+        "Rule_Package": {
+            "SQLi": {
+                "Mode": "default",
+                "SQLi_Set": [
+                    {
+                        "Rule_Id": "sqli-r1",
+                        "Chosen": true,
+                        "Action": "block",
+                        "Priority": 1
+                    },
+                    {
+                        "Rule_Id": "sqli-r2",
+                        "Chosen": true,
+                        "Action": "block",
+                        "Priority": 2
+                    },
+                    {
+                        "Rule_Id": "sqli-r3",
+                        "Chosen": true,
+                        "Action": "block",
+                        "Priority": 3
+                    }
+                ]
+            },
+            "XSS": {
+                "Mode": "default",
+                "XSS_Set": [
+                    {
+                        "Rule_Id": "xss-r1",
+                        "Chosen": true,
+                        "Action": "block",
+                        "Priority": 4
+                    },
+                    {
+                        "Rule_Id": "xss-r2",
+                        "Chosen": true,
+                        "Action": "block",
+                        "Priority": 5
+                    },
+                    {
+                        "Rule_Id": "xss-r3",
+                        "Chosen": true,
+                        "Action": "block",
+                        "Priority": 6
+                    }
+                ]
+            }
+        },
+        "Rule_Created": [
+            {
+                "Name": "eeee",
+                "Priority": 7,
+                "Action": {
+                    "Block": {}
+                },
+                "Visibility_Config": {
+                    "Sampled_Requests_Enabled": true,
+                    "CloudWatch_Metrics_Enabled": true,
+                    "Metric_Name": "qqq"
+                },
+                "Statement": {
+                    "Statement_Type": "MatchStatement",
+                    "Statement_Content": {
+                        "Match_Statement": {
+                            "Statement_Amount": 1,
+                            "Selected_Statement": {
+                                "Match_Type": "GeoMatchStatement",
+                                "GeoMatch_Statement": {
+                                    "Country_Codes": [
+                                        "AE"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        ]
+    }
+}

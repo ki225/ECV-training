@@ -4,6 +4,7 @@ from datetime import datetime
 import re
 import traceback
 import terraform_generator
+import subprocess
 
 # =================================== global data ==============================================================
 server = Flask(__name__)
@@ -111,16 +112,30 @@ def rule_ip():
             try:
                 rules_data = terraform_generator.generate_terraform(new_data)
                 try:
-                    with open("terraform/main.tf", 'w') as file:
+                    with open("/home/ec2-user/terraform/main.tf", 'w') as file:
                         file.write(rules_data)
-                        return jsonify({
+                        # print out the directory
+                        print(os.getcwd())
+                        # get into "/terraform" directory
+                        os.chdir("/home/ec2-user/terraform")
+
+                        try:
+                            subprocess.run(["terraform", "init"], check=True)
+                            subprocess.run(["terraform", "apply", "-auto-approve"], check=True)
+
+                            return jsonify({
                                     "status": "success",
                                     "data": {
                                         "deployedAt": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
                                         }
                                     }), 200
+                        except:
+                            print("Error running terraform")
+                            return jsonify({"message": "Error running terraform", "status": "error"}), 400
+                        
                 except:
                     print("Error writing terraform file")
+                    return jsonify({"message": "Error writing terraform file", "status": "error"}), 400
                 
             except Exception as e:
                 error_message = {

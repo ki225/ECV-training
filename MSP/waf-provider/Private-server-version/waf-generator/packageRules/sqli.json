@@ -4,7 +4,23 @@
         "Rule_Id": "sqli-r1",
         "Chosen": false,
         "Action": "",
-        "Rule_Configuration": "test"
+        "Rule_Configuration": "test-for sqli1"
+        
+    },
+    {
+        "Name": "SQLi-rule2",
+        "Rule_Id": "sqli-r2",
+        "Chosen": false,
+        "Action": "",
+        "Rule_Configuration": "test-for sqli2"
+        
+    },
+    {
+        "Name": "SQLi-rule3",
+        "Rule_Id": "sqli-r3",
+        "Chosen": false,
+        "Action": "",
+        "Rule_Configuration": "test-for sqli3"
         
     }
 ]

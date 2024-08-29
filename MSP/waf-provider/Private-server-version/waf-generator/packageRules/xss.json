@@ -4,17 +4,21 @@
         "Rule_Id": "xss-r1",
         "Chosen": false,
         "Action": "",
-        "Rule_Configuration": {
-            "": "test"
-        }
+        "Rule_Configuration": "test-for xss1"
+        
     },
     {
         "Name": "xss-rule2",
         "Rule_Id": "xss-r2",
         "Chosen": false,
         "Action": "",
-        "Rule_Configuration": {
-            "": "test"
-        }
+        "Rule_Configuration": "test-for xss2"
+    },
+    {
+        "Name": "xss-rule3",
+        "Rule_Id": "xss-r3",
+        "Chosen": false,
+        "Action": "",
+        "Rule_Configuration": "test-for xss3"
     }
 ]

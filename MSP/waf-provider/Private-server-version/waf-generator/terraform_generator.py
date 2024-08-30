@@ -444,7 +444,9 @@ class WAFConfig(BaseModel):
 def generate_terraform(config: json) -> str:
     # config_data = json.loads(config)
     waf_config = TypeAdapter(WAFConfig).validate_python(config)
-    customer_credential = "arn:aws:iam::429555954826:role/customer-role"   # IAM role ARN
+
+    customer_credential = "<CUSTOMER_ROLE>"   # IAM role ARN
+
 
     terraform_config = f"""
     # AWS Provider
@@ -457,7 +459,6 @@ def generate_terraform(config: json) -> str:
     }}
 
     resource "aws_wafv2_web_acl" "{waf_config.Waf.Name}" {{
-        provider = aws.customer
         name        = "{waf_config.Waf.Name}"
         description = "{waf_config.Waf.Description}"
         scope       = "{'CLOUDFRONT' if waf_config.Resource.Type.upper() == 'CLOUDFRONT' else 'REGIONAL'}"

@@ -3,7 +3,6 @@ from pydantic import BaseModel, Field, RootModel, TypeAdapter
 from typing import List, Literal, Optional, Union, Dict, Any
 import json
 import os
-# from terraform_executor import execute_terraform
 
 # ------------------------- AggregateKeyType -------------------------
 class TextTransformation(BaseModel):
@@ -34,12 +33,10 @@ class HTTPMethodKey(BaseModel):
     HTTP_Method: Dict
 
 class UriPathKey(BaseModel):
-    # Uri_Path: Dict[Literal["TextTransformations"], List[TextTransformation]]
     Name: str
     Text_Transformations: List[TextTransformation]
 
 class CookieKey(BaseModel):
-    # Cookie: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
     Name: str
     Text_Transformations: List[TextTransformation]
 
@@ -100,7 +97,7 @@ class JsonBody(BaseModel):
     Oversize_Handling: Literal["CONTINUE", "MATCH", "NO_MATCH"]
 
 class JA3Fingerprint(BaseModel):
-    Fallback_Behavior: Literal["MATCH"]
+    Fallback_Behavior: Literal["MATCH", "NO_MATCH"]
 
 class HeaderOrder(BaseModel):
     Oversize_Handling: Literal["CONTINUE"]
@@ -288,13 +285,17 @@ class RateBasedStatement(BaseModel):
         else:
             raise ValueError(f"Invalid AggregateKeyType: {self.Aggregate_Key_Type}")
 
+# -------------------------------------------------------
+class InsertHeaders(BaseModel):
+    Name: str
+    Value: str
 # ------------------------- action -------------------------
 class Header(BaseModel):
     Name: str
     Value: str
 
 class CustomRequest(BaseModel):
-    Custom_Request_Handling: Dict[str, List[Header]]
+    Custom_Request_Handling: Optional[List[InsertHeaders]] = Field(default_factory=list)
 
 class CustomResponse(BaseModel):
     Response_Headers: List[Header]
@@ -440,13 +441,10 @@ class WAFConfig(BaseModel):
     # Rule_Prioritization: RulePrioritization
 
 # =========================================== functions ============================================
-
 def generate_terraform(config: json) -> str:
     # config_data = json.loads(config)
     waf_config = TypeAdapter(WAFConfig).validate_python(config)
-
-    customer_credential = "<CUSTOMER_ROLE>"   # IAM role ARN
-
+    customer_credential = "<customer_role>"   # IAM role ARN
 
     terraform_config = f"""
     # AWS Provider
@@ -459,6 +457,7 @@ def generate_terraform(config: json) -> str:
     }}
 
     resource "aws_wafv2_web_acl" "{waf_config.Waf.Name}" {{
+        provider = aws.customer
         name        = "{waf_config.Waf.Name}"
         description = "{waf_config.Waf.Description}"
         scope       = "{'CLOUDFRONT' if waf_config.Resource.Type.upper() == 'CLOUDFRONT' else 'REGIONAL'}"
@@ -721,7 +720,13 @@ def generate_field_to_match(field_to_match): #  object type is <...>_Statement.F
     elif field_to_match.JA3_Fingerprint is not None:
         return 'ja3_fingerprint {}'
     elif field_to_match.Header_Order is not None:
-        return 'header_order {}'
+        return f"""
+        header_order {{
+            oversize_handling = "{field_to_match.Header_Order.Oversize_Handling}"
+
+        }}
+        
+        """
     elif field_to_match.Http_ is not None:
         return 'http {}'
     else:

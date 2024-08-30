@@ -40,15 +40,12 @@ def update_rules():
         print(key, val)
         if key == 'accountId' and not match_regex(str(val), r'\d{12}') :
             return jsonify({"message": "Error parsing accountid", "status": "error"}), 400
-
         elif key == 'rulesToUpdate':
             for rules in val:
                 if  not all(rule_key in rules for rule_key in ('id', 'action')) or\
                     not match_regex(str(rules['id']), r'0|[1-9]\d*') or\
                     not match_regex(str(rules['action']), r'allow|block|count'):
                         return jsonify({"message": "Error parsing rules", "status": "error"}), 400
-
-    # Successful process
     success_responce = {
         "status": "success",
 
@@ -112,17 +109,12 @@ def rule_ip():
             try:
                 rules_data = terraform_generator.generate_terraform(new_data)
                 try:
-                    with open("/home/ec2-user/terraform/main.tf", 'w') as file:
+                    with open("/home/ec2-user/main.tf", 'w') as file:
                         file.write(rules_data)
-                        # print out the directory
-                        print(os.getcwd())
-                        # get into "/terraform" directory
-                        os.chdir("/home/ec2-user/terraform")
-
+                        os.chdir("/home/ec2-user")
                         try:
                             subprocess.run(["terraform", "init"], check=True)
                             subprocess.run(["terraform", "apply", "-auto-approve"], check=True)
-
                             return jsonify({
                                     "status": "success",
                                     "data": {
@@ -132,11 +124,9 @@ def rule_ip():
                         except:
                             print("Error running terraform")
                             return jsonify({"message": "Error running terraform", "status": "error"}), 400
-                        
                 except:
                     print("Error writing terraform file")
                     return jsonify({"message": "Error writing terraform file", "status": "error"}), 400
-                
             except Exception as e:
                 error_message = {
                     "status": "error",
@@ -147,7 +137,7 @@ def rule_ip():
                 return (jsonify(error_message)), 400
 
     elif request.method == 'GET':
-        return jsonify({"data": rules_data}) # output all we have
+        return jsonify({"data": rules_data})
 
 
 @server.route('/v1/waf/ip-blocks', methods=['GET', 'POST'])

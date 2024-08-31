@@ -1,9 +1,8 @@
 # BaseModel is for some functions like validation, it is optional in every class
-from pydantic import BaseModel, Field, RootModel, TypeAdapter 
+from pydantic import BaseModel, Field, RootModel, TypeAdapter
 from typing import List, Literal, Optional, Union, Dict, Any
 import json
 import os
-# from terraform_executor import execute_terraform
 
 # ------------------------- AggregateKeyType -------------------------
 class TextTransformation(BaseModel):
@@ -14,25 +13,32 @@ class TextTransformation(BaseModel):
     Priority: int
 
 class QueryStringKey(BaseModel):
-    Query_String: Dict[Literal["TextTransformations"], List[TextTransformation]]
+    # Query_String: Dict[Literal["TextTransformations"], List[TextTransformation]]
+    Text_Transformations: List[TextTransformation]
 
 class QueryArgumentKey(BaseModel):
-    Query_Argument: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    # Query_Argument: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    Name: str
+    Text_Transformations: List[TextTransformation]
 
 class LabelNamespaceKey(BaseModel):
     Label_Namespace: Dict[Literal["Namespace"], str]
 
 class HeaderKey(BaseModel):
-    Header: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    # Header: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    Name: str
+    Text_Transformations: List[TextTransformation]
 
 class HTTPMethodKey(BaseModel):
     HTTP_Method: Dict
 
 class UriPathKey(BaseModel):
-    Uri_Path: Dict[Literal["TextTransformations"], List[TextTransformation]]
+    Name: str
+    Text_Transformations: List[TextTransformation]
 
 class CookieKey(BaseModel):
-    Cookie: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
+    Name: str
+    Text_Transformations: List[TextTransformation]
 
 Aggregation_Key = Union[
     QueryStringKey,
@@ -47,7 +53,6 @@ Aggregation_Key = Union[
 # ------------------------------------------ Inspect module ------------------------------------
 class SingleHeader(BaseModel):
     Name : str
-    # Single_Header: Dict[Literal["Name"], str]
 
 class MatchPattern(BaseModel):
     All: Optional[Dict] = None
@@ -63,13 +68,12 @@ class Headers(BaseModel):
     Oversize_Handling: Literal["CONTINUE", "MATCH", "NO_MATCH"]
 
 class Cookies(BaseModel):
-    Match_Scope: Literal["VALUE"]
+    Match_Scope: Literal["ALL", "KEY", "VALUE"]
     Match_Pattern: MatchPattern
     Oversize_Handling: Literal["CONTINUE", "MATCH", "NO_MATCH"]
 
 class SingleQueryArgument(BaseModel):
     Name: str
-    # Single_Query_Argument: Dict[Literal["Name"], str]
 
 class AllQueryArguments(BaseModel):
     pass
@@ -93,7 +97,7 @@ class JsonBody(BaseModel):
     Oversize_Handling: Literal["CONTINUE", "MATCH", "NO_MATCH"]
 
 class JA3Fingerprint(BaseModel):
-    Fallback_Behavior: Literal["MATCH"]
+    Fallback_Behavior: Literal["MATCH", "NO_MATCH"]
 
 class HeaderOrder(BaseModel):
     Oversize_Handling: Literal["CONTINUE"]
@@ -135,24 +139,22 @@ class IPSetForwardedIPConfig(BaseModel):
 
 # inspect
 class FieldToMatch(BaseModel):
-    Field: Union[
-        SingleHeader,
-        Headers,
-        Cookies,
-        SingleQueryArgument,
-        AllQueryArguments,
-        UriPath,
-        QueryString,
-        Body,
-        JsonBody,
-        JA3Fingerprint,
-        HeaderOrder,
-        Http
-    ]
+    Single_Header: Optional[SingleHeader] = None
+    Headers_: Optional[Headers] = None
+    Cookies_: Optional[Cookies] = None
+    Single_Query_Argument: Optional[SingleQueryArgument] = None
+    All_Query_Arguments: Optional[AllQueryArguments] = None
+    Uri_Path: Optional[UriPath] = None
+    Query_String: Optional[QueryString] = None
+    Body_: Optional[Body] = None
+    Json_Body: Optional[JsonBody] = None
+    JA3_Fingerprint: Optional[JA3Fingerprint] = None
+    Header_Order: Optional[HeaderOrder] = None
+    Http_: Optional[Http] = None
 
 class IPSetReferenceStatement(BaseModel):
     ARN: str
-    IPSet_forwarded_IP_config: Optional[IPSetForwardedIPConfig] = None #  originIp-ipHeader needs
+    IPSet_forwarded_IP_Config: Optional[IPSetForwardedIPConfig] = None #  originIp-ipHeader needs
 
 class LabelMatchStatement(BaseModel):
     Scope: Literal["LABEL", "NAMESPACE"]
@@ -203,7 +205,7 @@ class SelectedStatements(BaseModel):
     SizeConstraint_Statement: Optional[SizeConstraintStatement] = None
     SqliMatch_Statement: Optional[SqliMatchStatement] = None
     XssMatch_Statement: Optional[XssMatchStatement] = None
-    
+
 class MatchStatement(BaseModel):
     Selected_Statement: SelectedStatements
 
@@ -228,8 +230,7 @@ class OrStatement(BaseModel):
     Selected_Statement5: Optional[SelectedStatements] = None
 
 class AndStatement(BaseModel):
-    Statement_Amount: str
-    # Selected_Statement: List[Selected_Statements]
+    Statement_Amount: int
     Selected_Statement1: SelectedStatements
     Selected_Statement2: SelectedStatements
     Selected_Statement3: Optional[SelectedStatements] = None
@@ -237,7 +238,6 @@ class AndStatement(BaseModel):
     Selected_Statement5: Optional[SelectedStatements] = None
 
 class NotStatement(BaseModel):
-    # Selected_Statement: SelectedStatements
     Selected_Statement: SelectedStatements
 
 # ------------------------- rate_type -------------------------
@@ -285,13 +285,17 @@ class RateBasedStatement(BaseModel):
         else:
             raise ValueError(f"Invalid AggregateKeyType: {self.Aggregate_Key_Type}")
 
+# -------------------------------------------------------
+class InsertHeaders(BaseModel):
+    Name: str
+    Value: str
 # ------------------------- action -------------------------
 class Header(BaseModel):
     Name: str
     Value: str
 
 class CustomRequest(BaseModel):
-    Custom_Request_Handling: Dict[str, List[Header]]
+    Custom_Request_Handling: Optional[List[InsertHeaders]] = Field(default_factory=list)
 
 class CustomResponse(BaseModel):
     Response_Headers: List[Header]
@@ -335,12 +339,14 @@ class Action(BaseModel):
 class xssRule(BaseModel):
     Rule_Id: str
     Chosen: bool
-    Action: Optional[Literal["block", "allow", "count", "Captcha", "Challenge"]]
+    Action: Optional[Literal["Block", "Allow", "Count", "Captcha", "Challenge"]]
+    Priority: int
 
 class sqliRule(BaseModel):
     Rule_Id: str
     Chosen: bool
-    Action: Optional[Literal["block", "allow", "count", "Captcha", "Challenge"]]
+    Action: Optional[Literal["Block", "Allow", "Count", "Captcha", "Challenge"]]
+    Priority: int
 
 class XSS(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
@@ -351,8 +357,8 @@ class SQLi(BaseModel):
     SQLi_Set: List[sqliRule]
 
 class RulePackage(BaseModel):
-    SQLi: Optional[SQLi]
-    XSS: Optional[XSS]
+    SQLi_Package: Optional[SQLi] = None
+    XSS_Package: Optional[XSS] = None
 
 # ======================================= Created Rule (customized rules) =======================================
 class VisibilityConfig(BaseModel):
@@ -399,9 +405,9 @@ class Resource(BaseModel):
         "verifiedaccess"
     ]
     Region: str
-    Resource_Id: str 
-    Resource_Arn: str 
-    Resource_Name: str 
+    Resource_Id: str
+    Resource_Arn: str
+    Resource_Name: str
 
 class WAF(BaseModel):
     Name: str
@@ -416,8 +422,15 @@ class IPRule(BaseModel):
     Action: str
     CIDR: str
 
-class RulePrioritization(BaseModel):
-    pass
+# class RuleInfo(BaseModel):
+#     Name: str
+#     Id: int
+#     Priority: int
+
+# class RulePrioritization(BaseModel):
+#     Description: str
+#     Order: list[RuleInfo]
+
 
 class WAFConfig(BaseModel):
     Resource: Resource
@@ -425,50 +438,103 @@ class WAFConfig(BaseModel):
     Monitor_Settings: MonitorSettings
     IP: List[IPRule]
     Rules: Rules
-    Rule_Prioritization: RulePrioritization
+    # Rule_Prioritization: RulePrioritization
 
 # =========================================== functions ============================================
-
 def generate_terraform(config: json) -> str:
     # config_data = json.loads(config)
     waf_config = TypeAdapter(WAFConfig).validate_python(config)
-
-    customer_credential = "arn:aws:iam::812428033092:role/kg-terraform-role"   # IAM role ARN
+    customer_credential = "<customer_role>"   # IAM role ARN
 
     terraform_config = f"""
     # AWS Provider
     provider "aws" {{
-      alias  = "customer"
-      region = "us-east-1"
-      assume_role {{
-        role_arn = "{customer_credential}"
-      }}
+        alias  = "customer"
+        region = "us-east-1"
+        assume_role {{
+            role_arn = "{customer_credential}"
+        }}
     }}
 
     resource "aws_wafv2_web_acl" "{waf_config.Waf.Name}" {{
-      name        = "{waf_config.Waf.Name}"
-      description = "{waf_config.Waf.Description}"
-      scope       = "{'CLOUDFRONT' if waf_config.Resource.Type.upper() == 'CLOUDFRONT' else 'REGIONAL'}"
+        provider = aws.customer
+        name        = "{waf_config.Waf.Name}"
+        description = "{waf_config.Waf.Description}"
+        scope       = "{'CLOUDFRONT' if waf_config.Resource.Type.upper() == 'CLOUDFRONT' else 'REGIONAL'}"
 
+        default_action {{
+            allow {{}}
+        }}
 
-    default_action {{
-        allow {{}}
+        {generate_rules(waf_config.Rules)}
+
+        visibility_config {{
+          cloudwatch_metrics_enabled = true
+          metric_name                = "{waf_config.Monitor_Settings.CW_Metric_Name}"
+          sampled_requests_enabled   = {str(waf_config.Monitor_Settings.Option).lower()}
+        }}
     }}
 
-      {generate_rules(waf_config.Rules)}
+    resource "aws_wafv2_web_acl_association" "waf_association" {{
+        provider = aws.customer
+        resource_arn = "{waf_config.Resource.Resource_Arn}"
+        web_acl_arn  = aws_wafv2_web_acl.{waf_config.Waf.Name}.arn
     }}
+
     """
     return terraform_config
 
-def generate_rules(rules: Dict[str, List[Rule]]) -> str:
+
+cate_dict = {"SQLi_Package": "SQLi_Set", "XSS_Package": "XSS_Set"}
+def generate_rules(rules) -> str:
     all_rules = []
     for rule in rules.Rule_Created:
-        all_rules.append(generate_rule(rule))
-        # all_rules.extend(generate_rule(rule) for rule in rule_list)
+        all_rules.append(generate_cus_rule(rule))
+    for category, set_name in cate_dict.items():
+        try:
+            if hasattr(rules.Rule_Package, category):
+                category_obj = getattr(rules.Rule_Package, category)
+                category_obj = category_obj.dict()
+                rule_set = category_obj[set_name]
+                for rule in rule_set:
+                    result = generate_package_rule(rule)
+                    if result: # prevent empty result
+                        all_rules.append(result)
+            else:
+                print(f"{category} not found in Rule_Package")
+        except:
+            print(f"{category} not found in Rule_Package")
+            continue
     return "\n".join(all_rules)
 
-def generate_rule(rule: Rule) -> str:
+rules_categories = ["SQLi", "XSS"]
+def generate_package_rule(target_rule):
+    ruleid = str(target_rule["Rule_Id"])
+    index = ruleid.find("-")
+    priority = target_rule["Priority"]
 
+    file_path = f"packageRules/{ruleid[:index]}.json"
+    try:
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+            for rule in data:
+                if rule["Rule_Id"] == target_rule["Rule_Id"]:
+                    config_str = rule["Rule_Configuration"]
+                    config_list = config_str.split("\\n")
+                    # combine all of them
+                    print("\n".join(config_list))
+                    return "\n".join(config_list)
+    except FileNotFoundError:
+        print(f"Error: The file '{file_path}' was not found.")
+        return None
+    except json.JSONDecodeError:
+        print(f"Error: The file '{file_path}' does not contain valid JSON.")
+        return None
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
+        return None
+
+def generate_cus_rule(rule: Rule) -> str:
     rule_config = f"""
       rule {{
         name     = "{rule.Name}"
@@ -489,22 +555,41 @@ def generate_rule(rule: Rule) -> str:
 
 
 def generate_action(action: Action) -> str:
+    # terraform require nested block to be in multiline
     if action.Block:
-        return "action { block {} }"
+        return f"""action {{
+                    block {{}}
+                }}"""
     elif action.Allow:
-        return "action { allow {} }"
+        return f"""action {{
+                        allow {{}}
+                    }}"""
     elif action.Count:
-        return "action { count {} }"
+        return f"""action {{
+                        count {{}}
+                    }}"""
     elif action.Captcha:
-        return "action { captcha {} }"
+        return f"""action {{
+                        captcha {{}}
+                    }}"""
     elif action.Challenge:
-        return "action { challenge {} }"
+        return f"""action {{
+                        challenge {{}}
+                    }}"""
     else:
         return "# Unknown action type"
 
 # ---------------------------------- statement ----------------------------------------------------
 def generate_geo(geo_statement):
-    return f"geo_match_statement {{ country_codes = { geo_statement.Country_Codes} }}"
+    # terraform only allow double quotes around country code
+    country_codes_str = ", ".join(f'"{code}"' for code in geo_statement.Country_Codes)
+    return f"""
+        geo_match_statement {{ 
+            country_codes = [{country_codes_str}] 
+        }}
+    """
+
+
 
 def generate_rate_based_statement(rate_based_statement):
     return f"""
@@ -514,12 +599,19 @@ def generate_rate_based_statement(rate_based_statement):
         }}
     """
 
-
 def generate_ip_set_reference(ip_set_statement):
-    return f'ip_set_reference_statement {{ arn = "{ip_set_statement.ARN}" }}'
+    return f'''
+        ip_set_reference_statement {{ 
+            arn = "{ip_set_statement.ARN}" 
+        }}
+    '''
 
 def generate_label_match(label_match_statement):
-    return f'label_match_statement {{ key = "{label_match_statement.Key}", scope = "{label_match_statement.Scope}" }}'
+    return f'''label_match_statement {{ 
+            key = "{label_match_statement.Key}"
+            scope = "{label_match_statement.Scope}" 
+        }}
+    '''
 
 def generate_byte_match(byte_match_statement):
     return f"""
@@ -536,7 +628,11 @@ def generate_byte_match(byte_match_statement):
     """
 
 def generate_regex_pattern_set_reference(regex_pattern_set_statement):
-    return f'regex_pattern_set_reference_statement {{ arn = "{regex_pattern_set_statement.ARN}" }}'
+    return f'''
+        regex_pattern_set_reference_statement {{ 
+            arn = "{regex_pattern_set_statement.ARN}" 
+        }}
+    '''
 
 def generate_regex_match(regex_match_statement):
     return f"""
@@ -590,9 +686,51 @@ def generate_xss_match(xss_match_statement):
         }}
     """
 
-def generate_field_to_match(field_to_match):
-    if 'SingleHeader' in field_to_match:
+
+def generate_field_to_match(field_to_match): #  object type is <...>_Statement.Field_To_Match
+    if field_to_match.Single_Header is not None:
         return f'single_header {{ name = "{field_to_match.Single_Header.Name}" }}'
+    elif field_to_match.Headers_ is not None:
+        return 'headers {}'  # You might need to add more details here depending on the Headers structure
+    elif field_to_match.Cookies_ is not None:
+        return f"""
+        cookies{{
+            match_scope = "{field_to_match.Cookies_.Match_Scope}"
+            match_pattern {{
+                    all {{
+
+                    }}
+            }}
+            oversize_handling = "{field_to_match.Cookies_.Oversize_Handling}"
+        }}
+
+        """
+    elif field_to_match.Single_Query_Argument is not None:
+        return f'single_query_argument {{ name = "{field_to_match.Single_Query_Argument.Name}" }}'
+    elif field_to_match.All_Query_Arguments is not None:
+        return 'all_query_arguments {}'
+    elif field_to_match.Uri_Path is not None:
+        return 'uri_path {}'
+    elif field_to_match.Query_String is not None:
+        return 'query_string {}'
+    elif field_to_match.Body_ is not None:
+        return 'body {}'
+    elif field_to_match.Json_Body is not None:
+        return 'json_body {}'  # You might need to add more details here depending on the JsonBody structure
+    elif field_to_match.JA3_Fingerprint is not None:
+        return 'ja3_fingerprint {}'
+    elif field_to_match.Header_Order is not None:
+        return f"""
+        header_order {{
+            oversize_handling = "{field_to_match.Header_Order.Oversize_Handling}"
+
+        }}
+        
+        """
+    elif field_to_match.Http_ is not None:
+        return 'http {}'
+    else:
+        raise ValueError("No valid field_to_match type found")
 
 def generate_text_transformation(text_transformation):
     return f"""
@@ -603,83 +741,58 @@ def generate_text_transformation(text_transformation):
 def generate_match_statement(statement): # .Match_Statement.Selected_Statement
     config = ""
     if statement.Match_Type == "GeoMatchStatement":
-        config += f"""
-            statement {{
-                {generate_geo(statement.GeoMatch_Statement)}
-            }}
-        """
+        config += generate_geo(statement.GeoMatch_Statement)
     elif statement.Match_Type == "IPSetReferenceStatement":
-        config += f"""
-            statement {{
-                {generate_ip_set_reference(statement.IPSetReference_Statement)}
-            }}
-        """
+        config += generate_ip_set_reference(statement.IPSetReference_Statement)
     elif statement.Match_Type == "LabelMatchStatement":
-        config += f"""
-            statement {{
-                {generate_label_match(statement.LabelMatch_Statement)}
-            }}
-        """
+        config += generate_label_match(statement.LabelMatch_Statement)
     elif statement.Match_Type == "ByteMatchStatement":
-        config += f"""
-            statement {{
-                {generate_byte_match(statement.ByteMatch_Statement)}
-            }}
-        """
+        config += generate_byte_match(statement.ByteMatch_Statement)
     elif statement.Match_Type == "RegexPatternSetReferenceStatement":
-        config += f"""
-            statement {{
-                {generate_regex_pattern_set_reference(statement.RegexPatternSetReference_Statement)}
-            }}
-        """
+        config += generate_regex_pattern_set_reference(statement.RegexPatternSetReference_Statement)
     elif statement.Match_Type == "RegexMatchStatement":
-        config += f"""
-            statement {{
-                {generate_regex_match(statement.RegexMatch_Statement)}
-            }}
-        """
+        config += generate_regex_match(statement.RegexMatch_Statement)
     elif statement.Match_Type == "SizeConstraintStatement":
-        config += f"""
-            statement {{
-                {generate_size_constraint(statement.SizeConstraint_Statement)}
-            }}
-        """
+        config += generate_size_constraint(statement.SizeConstraint_Statement)
     elif statement.Match_Type == "SqliMatchStatement":
-        config += f"""
-            statement {{
-                {generate_sqli_match(statement.SqliMatch_Statement)}
-            }}
-        """
+        config += generate_sqli_match(statement.SqliMatch_Statement)
     elif statement.Match_Type == "XssMatchStatement":
-        config += f"""
-            statement {{
-                {generate_xss_match(statement.XssMatch_Statement)}
-            }}
-        """
+        config += generate_xss_match(statement.XssMatch_Statement)
     else:
         config += f"# Unsupported match type: {statement.Match_Type}"
-    
     return config
 
 def generate_not_statement(statement):
     not_statement_config = f"""
         not_statement {{
-            {generate_match_statement(statement)}
+            statement {{
+                {generate_match_statement(statement)}
+            }}
         }}
     """
     return not_statement_config
 
-def generate_or_statement(statement) :
-    statement_num = int(statement.Statement_amount)
+def generate_or_statement(statement: object):  # obj type is Statement_Content.And_Statement
+    statement_num = int(statement.Statement_Amount)
     statement1 = statement.Selected_Statement1
     statement2 = statement.Selected_Statement2
     statement3 = statement.Selected_Statement3
     statement4 = statement.Selected_Statement4
     statement5 = statement.Selected_Statement5
-    statement_list = [statement1, statement2, statement3, statement4, statement5] 
+    statement_list = [statement1, statement2, statement3, statement4, statement5]
     config = ""
     for i in range(statement_num):
-        config += f"{generate_match_statement(statement_list[i])}\n"
+        if hasattr(statement_list[i], 'Not') and statement_list[i].Not == True:
+            config += f"""
+                statement {{
+                        {generate_match_statement(statement_list[i])}
+                }}\n"""
+        else:
+            config += f"""
+                statement {{
+                        {generate_match_statement(statement_list[i])}
+                }}\n"""
+
     or_statement_config = f"""
         or_statement {{
             {config}
@@ -687,17 +800,28 @@ def generate_or_statement(statement) :
     """
     return or_statement_config
 
-def generate_and_statement(statement) :
-    statement_num = int(statement.Statement_amount)
+def generate_and_statement(statement: object):  # obj type is Statement_Content.And_Statement
+    statement_num = int(statement.Statement_Amount)
     statement1 = statement.Selected_Statement1
     statement2 = statement.Selected_Statement2
     statement3 = statement.Selected_Statement3
     statement4 = statement.Selected_Statement4
     statement5 = statement.Selected_Statement5
-    statement_list = [statement1, statement2, statement3, statement4, statement5] 
+    statement_list = [statement1, statement2, statement3, statement4, statement5]
     config = ""
+
     for i in range(statement_num):
-        config += f"{generate_match_statement(statement_list[i])}\n"
+        if hasattr(statement_list[i], 'Not') and statement_list[i].Not == True:
+            config += f"""
+                statement {{
+                        {generate_match_statement(statement_list[i])}
+                }}\n"""
+        else:
+            config += f"""
+                statement {{
+                        {generate_match_statement(statement_list[i])}
+                }}\n"""
+
     and_statement_config = f"""
         and_statement {{
             {config}

@@ -13,7 +13,6 @@ class WAFConfig(BaseModel):
     IP: List[IPRule]
     Rules: Rules
     Rule_Prioritization: RulePrioritization
-
 ```
 
 - resource: What kind of resource the WAF to build upon.
@@ -35,9 +34,9 @@ class Resource(BaseModel):
         "verifiedaccess"
     ]
     Region: str
-    Resource_id: str = Field(alias="Resource-id")
-    Resource_arn: str = Field(alias="Resource-arn")
-    Resource_name: str = Field(alias="Resource-name")
+    Resource_Id: str 
+    Resource_Arn: str 
+    Resource_Name: str
 
 class WAF(BaseModel):
     Name: str
@@ -63,8 +62,8 @@ For rule package part, it might contain several types of rules, such as SQL inje
 
 ```py
 class RulePackage(BaseModel):
-    Sqli: Optional[SQLi]
-    Xss: Optional[XSS]
+    SQLi: Optional[SQLi]
+    XSS: Optional[XSS]
 ```
 For each security aspect, it has the following information:
 - mode: customer's level
@@ -77,7 +76,7 @@ class XSS(BaseModel):
 
 class SQLi(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
-    SQLi_Set: List[str]
+    SQLi_Set: List[sqliRule]
 ```
 
 
@@ -89,14 +88,13 @@ For each set, it contains multiple choices of rules for customers. For each rule
 ```py
 class xssRule(BaseModel):
     Rule_Id: str
-    Chosen: Literal["true", "false"]
-    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
+    Chosen: bool
+    Action: Optional[Literal["block", "allow", "count", "Captcha", "Challenge"]]
 
-class aqliRule(BaseModel):
+class sqliRule(BaseModel):
     Rule_Id: str
-    Chosen: Literal["true", "false"]
-    Action: Union[BlockAction, AllowAction, CountAction, CaptchaAction, ChallengeAction]
-
+    Chosen: bool
+    Action: Optional[Literal["block", "allow", "count", "Captcha", "Challenge"]]
 ```
 
 
@@ -106,8 +104,8 @@ In this part, we use the Rules Class to get all the customized rules.
 
 ```py
 class Rules(BaseModel):
-    Rule_Package: List = []
-    Rule_Created: List[Rule]
+    Rule_Package: Optional[RulePackage] = None
+    Rule_Created: Optional[List[Rule]] = None
 ```
 
 For each rule, we use the Rule Class to define.
@@ -115,9 +113,9 @@ For each rule, we use the Rule Class to define.
 ```py
 class Rule(BaseModel):
     Name: str
-    Priority: str
+    Priority: int
     Action: Action
-    Visibility_config: VisibilityConfig
+    Visibility_Config: VisibilityConfig
     Statement: Statements
 ```
 
@@ -174,8 +172,11 @@ class CustomRequest(BaseModel):
 
 ### CaptchaConfig module
 ```py
+class ImmunityTimeProperty(BaseModel):
+    Immunity_Time: str
+
 class CaptchaConfig(BaseModel):
-    Immunity_Time: int = Field(..., description="Immunity time in seconds")
+    Immunity_Time_Property: ImmunityTimeProperty
 ```
 
 The Class Header is defined like the following:
@@ -204,41 +205,41 @@ class StatementContent(BaseModel):
     And_Statement: Union[AndStatement, None] = None
 
 class Statements(BaseModel):
-    Statement_type: Literal["MatchStatement","NotStatement","OrStatement","AndStatement"]
+    Statement_Type: Literal["MatchStatement","NotStatement","OrStatement","AndStatement"]
     Statement_Content: StatementContent
 ```
 
 For each statement_type, the definitions is like the following:
 ```py
 class MatchStatement(BaseModel):
-    Selected_statement: SelectedStatements
+    Selected_Statement: SelectedStatements
     
 class OrStatement(BaseModel):
-    Statement_amount: str
-    Selected_statement1: SelectedStatements
-    Selected_statement2: SelectedStatements
-    Selected_statement3: Optional[SelectedStatements]
-    Selected_statement4: Optional[SelectedStatements]
-    Selected_statement5: Optional[SelectedStatements]
+    Statement_Amount: int
+    Selected_Statement1: SelectedStatements
+    Selected_Statement2: SelectedStatements
+    Selected_Statement3: Optional[SelectedStatements] = None
+    Selected_Statement4: Optional[SelectedStatements] = None
+    Selected_Statement5: Optional[SelectedStatements] = None
 
 class AndStatement(BaseModel):
-    Statement_amount: str
-    Selected_statement1: SelectedStatements
-    Selected_statement2: SelectedStatements
-    Selected_statement3: Optional[SelectedStatements]
-    Selected_statement4: Optional[SelectedStatements]
-    Selected_statement5: Optional[SelectedStatements]
+    Statement_Amount: int
+    Selected_Statement1: SelectedStatements
+    Selected_Statement2: SelectedStatements
+    Selected_Statement3: Optional[SelectedStatements] = None
+    Selected_Statement4: Optional[SelectedStatements] = None
+    Selected_Statement5: Optional[SelectedStatements] = None
 
 class NotStatement(BaseModel):
-    # Selected_statement: SelectedStatements
-    Selected_statement: List[SelectedStatements] 
+    Selected_Statement: SelectedStatements
 ```
 ---
 ## matchType module
 In MatchStatement, there are many types:
 ```py
 class SelectedStatements(BaseModel):
-    Match_type: str # to check which type of matchstatement in this statement block.
+    Match_Type: str
+    Not: Optional[bool] = None
     GeoMatch_Statement: Optional[GeoMatchStatement] = None
     IPSetReference_Statement: Optional[IPSetReferenceStatement] = None
     LabelMatch_Statement: Optional[LabelMatchStatement] = None
@@ -248,11 +249,12 @@ class SelectedStatements(BaseModel):
     SizeConstraint_Statement: Optional[SizeConstraintStatement] = None
     SqliMatch_Statement: Optional[SqliMatchStatement] = None
     XssMatch_Statement: Optional[XssMatchStatement] = None
+   
 ```
 
 Here is the definition for every class in detailed.
 
-```py=
+```py
 class ForwardedIPConfig(BaseModel):
     Header_Name: str
     Fallback_Behavior: Literal["MATCH", "NO_MATCH"]
@@ -285,7 +287,7 @@ class IPSetForwardedIPConfig(BaseModel):
 
 class IPSetReferenceStatement(BaseModel):
     ARN: str
-    IPSet_forwarded_IP_config: Optional[IPSetForwardedIPConfig] = None #  originIp-ipHeader needs
+    IPSet_forwarded_IP_Config: Optional[IPSetForwardedIPConfig] = None #  originIp-ipHeader needs
 
 class LabelMatchStatement(BaseModel):
     Scope: Literal["LABEL", "NAMESPACE"]
@@ -328,7 +330,7 @@ For the parameter "Field_To_Match," the value assigned to it should be the one w
 ```py
 class FieldToMatch(BaseModel):
     # inspect
-    field: Union[
+    Field: Union[
         SingleHeader,
         Headers,
         Cookies,

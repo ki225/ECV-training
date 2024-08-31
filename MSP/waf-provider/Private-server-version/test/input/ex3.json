@@ -24,7 +24,8 @@
                     {
                         "Rule_Id": "1",
                         "Chosen": true,
-                        "Action": "count"
+                        "Action": "count",
+                        "Priority": "sqli-r1"
                     },
                     {
                         "Rule_Id": "2",

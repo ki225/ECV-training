@@ -416,3 +416,30 @@ Unresolved Challenges:
 
 To-Do
 - Find rules samples for demo
+
+# 2024/8/26
+
+Tasks:
+- find regex rules for WAF protection
+    - https://github.com/nasbench/sigma/tree/master/rules/web/webserver_generic
+    - SQLi for each database
+    - XSS
+- make connection between API gateway and terraform generator 
+- complete the terraform generator's environment
+    - use python version later than 3.8
+        - https://repost.aws/questions/QUtA3qNBaLSvWPfD5kFwI0_w/python-3-10-on-ec2-running-amazon-linux-2-and-the-openssl-upgrade-requirement
+
+To-Do:
+- modify the json test and send it from API gateway to server 
+- find more regex
+- modify the server.py
+- modify the user data for terraform generator's environment
+
+# 2024/8/27
+Tasks:
+- make front-end send API request to back-end server and build file successfully 
+
+To-Do:
+- find more regex
+- test whether the terraform file can execute successfully
+- add priority part

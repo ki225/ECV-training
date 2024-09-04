@@ -145,6 +145,9 @@ resource "aws_instance" "flask_server" {
       sudo ln -s /usr/bin/python3.8 /usr/bin/python3
       sudo ln -s /usr/bin/pydoc3.8 /usr/bin/pydoc
       sudo yum install -y python3 python3-pip
+      sudo yum install -y yum-utils
+      sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+      sudo yum -y install terraform
 
       pip3 install flask
       pip3 install pydantic
@@ -623,7 +626,7 @@ resource "aws_api_gateway_deployment" "deployment2" {
 # ======================== S3 ==================================================
 
 resource "aws_s3_bucket" "kg_frontend_bucket" {
-  bucket = "kg-waf-manager-front-end-server"  
+  bucket = "waf-manager-storing-user-data"  
 
   tags = {
     Name        = "kg-s3"

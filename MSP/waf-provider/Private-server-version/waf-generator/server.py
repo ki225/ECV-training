@@ -4,21 +4,21 @@ from datetime import datetime
 import re
 import traceback
 import terraform_generator
-import subprocess
+import s3_handler
+import tf_deploy
 
-# =================================== global data ==============================================================
 server = Flask(__name__)
+
 ip_regex = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 rules_data = None
 blocked_ips = []
 reasons = []
 last_updated = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-# =================================== global function =============================================================
+
 def match_regex(string, pattern):
     return bool(re.match(pattern, string))
 
-# =========================================== REST API handling =====================================================
 # for health check
 @server.route('/', methods=['GET'])
 def health_check():
@@ -32,20 +32,19 @@ def update_rules():
     try:
         recv_data = request.get_json()
     except:
-        return jsonify({"message": "Error parsing JSON", "status": "error"}), 400
+        return jsonify({"message": "Error parsing JSON", "status": "error"}), 401
 
     # ========================  Validate the data =============================
-    
     for key, val in recv_data.items():
         print(key, val)
         if key == 'accountId' and not match_regex(str(val), r'\d{12}') :
-            return jsonify({"message": "Error parsing accountid", "status": "error"}), 400
+            return jsonify({"message": "Error parsing accountid", "status": "error"}), 402
         elif key == 'rulesToUpdate':
             for rules in val:
                 if  not all(rule_key in rules for rule_key in ('id', 'action')) or\
                     not match_regex(str(rules['id']), r'0|[1-9]\d*') or\
                     not match_regex(str(rules['action']), r'allow|block|count'):
-                        return jsonify({"message": "Error parsing rules", "status": "error"}), 400
+                        return jsonify({"message": "Error parsing rules", "status": "error"}), 403
     success_responce = {
         "status": "success",
 
@@ -55,38 +54,6 @@ def update_rules():
         }
     }
 
-    return jsonify(success_responce), 200
-
-@server.route('/v1/waf/ip-blocks', methods=['PUT'])
-def update_ip():
-    # Get the JSON data from the request
-    if not request.data:
-        return jsonify({"message": "No data received", "status": "error"}), 400
-
-    try:
-        recv_data = request.get_json()
-    except:
-        return jsonify({"message": "Error parsing JSON", "status": "error"}), 400
-
-    # Validate the data
-    if not all(key in recv_data for key in ('original', 'ip')):
-        return jsonify({"message": "Error parsing data", "status": "error"}), 400
-
-    if not match_regex(str(recv_data['original']), ip_regex):
-        return jsonify({"message": "Error parsing original ip", "status": "error"}), 400
-
-    if not match_regex(str(recv_data['ip']), ip_regex):
-        return jsonify({"message": "Error parsing updated ip", "status": "error"}), 400
-
-    # Successful process
-    success_responce = {
-        "status": "success",
-        "message": "IP in block list is successfully updated",
-        "data": {
-          **recv_data,
-          "UpdatedAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        }
-    }
     return jsonify(success_responce), 200
 
 # GET, POST, DELETE(use method POST)
@@ -98,35 +65,33 @@ def rule_ip():
 
     if request.method == 'POST':
         if not request.data:
-            return jsonify({"message": "No data received", "status": "error"}), 400
+            return jsonify({"message": "No data received", "status": "error"}), 409
         try:
             new_data = request.get_json()
+            
         except Exception as e:
             print(new_data)
-            return jsonify({"message": "Error parsing JSON", "error": str(e), "status": "error"}), 400
-
+            return jsonify({"message": "Error parsing JSON", "error": str(e), "status": "error"}), 410
+        
         if new_data:
             try:
-                rules_data = terraform_generator.generate_terraform(new_data)
+                rules_data, user_id = terraform_generator.generate_terraform(new_data)
+                try:
+                    s3_handler.upload_to_s3_with_content("kg-for-test", f"user_data/{user_id}", "generated_json.json", new_data)
+                except:
+                    print("Error storing in s3")
+                    return jsonify({"message": "Error storing in s3", "status": "error"}), 411
+                
                 try:
                     with open("/home/ec2-user/main.tf", 'w') as file:
+                        s3_handler.upload_to_s3_with_content("kg-for-test", f"user_data/{user_id}", "main.tf", rules_data)
                         file.write(rules_data)
                         os.chdir("/home/ec2-user")
-                        try:
-                            subprocess.run(["terraform", "init"], check=True)
-                            subprocess.run(["terraform", "apply", "-auto-approve"], check=True)
-                            return jsonify({
-                                    "status": "success",
-                                    "data": {
-                                        "deployedAt": datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
-                                        }
-                                    }), 200
-                        except:
-                            print("Error running terraform")
-                            return jsonify({"message": "Error running terraform", "status": "error"}), 400
+                        tf_deploy.run_terraform_deploy(user_id)
+                        return jsonify({"message": "Success", "status": "success"}), 200
                 except:
                     print("Error writing terraform file")
-                    return jsonify({"message": "Error writing terraform file", "status": "error"}), 400
+                    return jsonify({"message": "Error writing terraform file", "status": "error"}), 412
             except Exception as e:
                 error_message = {
                     "status": "error",
@@ -134,101 +99,16 @@ def rule_ip():
                     "error": str(e),
                     "trace": traceback.format_exc()
                 }
-                return (jsonify(error_message)), 400
+                print(error_message)
+                return (jsonify(error_message)), 413
 
     elif request.method == 'GET':
         return jsonify({"data": rules_data})
 
 
-@server.route('/v1/waf/ip-blocks', methods=['GET', 'POST'])
-def block_ip():
-    global last_updated
-    if request.method == 'POST':
-        # Get the JSON data from the request
-        if not request.data:
-            return jsonify({"message": "No data received", "status": "error"}), 400
-        try:
-            new_data = request.get_json()
-        except:
-            return jsonify({"message": "Error parsing JSON", "status": "error"}), 400
-
-        if 'action' in new_data and 'delete' == new_data['action']:
-            # Validate the data
-            if 'ip' not in new_data.keys():
-                return jsonify({"message": "Missing ip", "status": "error"}), 400
-
-            if not match_regex(str(new_data['ip']), ip_regex):
-                return jsonify({"message": "Error parsing ip", "status": "error"}), 400
-
-            # Successful process
-            success_responce = {
-                "status": "success",
-                "message": "IP successfully removed from block list",
-                "data": {
-                  **new_data,
-                  "RemovedAt": datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-                }
-            }
-
-            return jsonify(success_responce), 200
-
-        else:
-            if new_data and "ip" in new_data and "reason" in new_data:
-                last_updated = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
-                blocked_ips.append(new_data["ip"])
-                reasons.append(new_data["reason"])
-                return jsonify({
-                                "status": "success",
-                                "message": "IP successfully added to block list",
-                                "data": {
-                                        "ip": new_data["ip"],
-                                        "reason": new_data["reason"],
-                                        "addedAt": last_updated
-                                    }
-                                }), 200
-            elif new_data and "ip" in new_data:
-                last_updated = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
-                blocked_ips.append(new_data["ip"])
-                return jsonify({
-                                "status": "success",
-                                "message": "IP successfully added to block list",
-                                "data": {
-                                        "ip": new_data["ip"],
-                                        "addedAt": last_updated
-                                    }
-                                }), 200
-            else:
-                return jsonify({"message": "Invalid IP address format", "status": "error"}), 500
-
-    elif request.method == 'GET':
-        if reasons:
-            return jsonify({
-                "status": "success",
-                "data": {
-                    "blockedIPs": blocked_ips,
-                    "reasons": reasons,
-                    "lastUpdated": last_updated
-                }
-            }), 200
-        elif blocked_ips: # HTTP methods POST and DELETE should includes ip
-            return jsonify({
-                "status": "success",
-                "data": {
-                    "blockedIPs": blocked_ips,
-                    "lastUpdated": last_updated
-                }
-            }), 200
-        else:
-            return jsonify({
-                "status": "error",
-                "data": {
-                    "messages": "Failed to retrieve IP block list"
-                }
-            }), 500
-
 @server.after_request
 def add_header(response):
-    response.headers['Access-Control-Allow-Origin'] = 'http://kg-bucket.s3-website-us-east-1.amazonaws.com'
+    response.headers['Access-Control-Allow-Origin'] = 'https://kg-for-test.s3.amazonaws.com'
     return response
 
 if __name__ == '__main__':

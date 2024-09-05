@@ -443,3 +443,94 @@ To-Do:
 - find more regex
 - test whether the terraform file can execute successfully
 - add priority part
+
+
+# 2024/8/28
+Tasks:
+- make the process that front-end send API request to back-end server and build file fluently
+- add priority to the rule
+- find bugs
+- combine both customized rules and package rules
+
+To-Do:
+- test whether the terraform file works
+- make the rule package file for generating detail of the package rule 
+- modify Pydantic document
+- automatic deployment python file
+
+# 2024/8/29
+Tasks:
+- test whether the terraform file works
+- make the rule package file for generating detail of the package rule 
+- modify Pydantic document
+- make terraform be executed automatically
+
+Learn:
+- Browser Caching
+
+To-Do:
+- cross account
+- rule priority
+- complete Web request body inspection
+
+# 2024/8/30
+Tasks:
+- make function work cross account
+- finish first version
+- clean the code
+- write document and notes
+
+To-Do:
+- clean the code
+- add more functions and fix the bug
+
+# 2024/9/2
+Tasks:
+- Design a new architecture for waf-manager 
+
+goal: 
+- achieve reliability, availability and security
+- 3-tier framework
+- Real time rendered web page
+- asynchronized
+- Distinguish each user's credential and information
+- handle multiple users' request?
+- Dynamic Workspace Creation: Create a separate workspace (directory) for each customer's Terraform project.
+
+Learn
+- TTL
+- websocket
+- package manager
+
+# 2024/9/3
+Tasks:
+- use websocket api gateway for rendering front-end
+- modify the terraform file
+
+To-Do:
+- find the solution to fix the problem today
+- make front-end be rendered 
+- handle with different client credential
+
+# 2024/9/4
+Tasks:
+- handle with different client credential
+- update data to s3 with polling method 
+- document
+
+To-Do:
+- make front-end and back-end work together
+- document
+- priority
+
+# 2024/9/5
+Tasks:
+- make terraform file execute in terraform workspace to prevent "state lock" problem
+- test for credential switching
+- use WSGI for making tasks running concurrently
+- document writing
+
+Learn 
+- WSGI
+    - propose: make execute concurrently
+    - Gunicorn

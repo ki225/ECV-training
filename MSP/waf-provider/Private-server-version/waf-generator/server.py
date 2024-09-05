@@ -76,6 +76,13 @@ def rule_ip():
         if new_data:
             try:
                 rules_data, user_id = terraform_generator.generate_terraform(new_data)
+                directory = f"/home/ec2-user/customers/{user_id}"
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                    print(f"Directory '{directory}' created successfully.")
+                else:
+                    print(f"Directory '{directory}' already exists.")
+
                 try:
                     s3_handler.upload_to_s3_with_content("kg-for-test", f"user_data/{user_id}", "generated_json.json", new_data)
                 except:
@@ -83,15 +90,31 @@ def rule_ip():
                     return jsonify({"message": "Error storing in s3", "status": "error"}), 411
                 
                 try:
-                    with open("/home/ec2-user/main.tf", 'w') as file:
-                        s3_handler.upload_to_s3_with_content("kg-for-test", f"user_data/{user_id}", "main.tf", rules_data)
+                    with open(f"{directory}/main.tf", 'w') as file:
                         file.write(rules_data)
-                        os.chdir("/home/ec2-user")
+                        s3_handler.upload_to_s3_with_content("kg-for-test", f"user_data/{user_id}", "main.tf", rules_data)
                         tf_deploy.run_terraform_deploy(user_id)
-                        return jsonify({"message": "Success", "status": "success"}), 200
+                        
                 except:
                     print("Error writing terraform file")
-                    return jsonify({"message": "Error writing terraform file", "status": "error"}), 412
+                    return jsonify({"message": "Error uploading terraform file", "status": "error"}), 412
+                
+                # tf_deploy.run_terraform_deploy(user_id)
+                try:
+                    file.write(rules_data)
+                    os.chdir(f"{directory}")
+                    tf_deploy.run_terraform_deploy(user_id)
+                    print("success")
+                    return jsonify({"message": "Success", "status": "success"}), 200
+                except Exception as e:
+                    error_message = {
+                        "status": "error",
+                        "message": "An error occurred while deploying Terraform",
+                        "error": str(e),
+                        "trace": traceback.format_exc()
+                    }
+                    print(error_message)
+                    return (jsonify(error_message)), 413
             except Exception as e:
                 error_message = {
                     "status": "error",
@@ -100,7 +123,7 @@ def rule_ip():
                     "trace": traceback.format_exc()
                 }
                 print(error_message)
-                return (jsonify(error_message)), 413
+                return (jsonify(error_message)), 414
 
     elif request.method == 'GET':
         return jsonify({"data": rules_data})
@@ -110,6 +133,3 @@ def rule_ip():
 def add_header(response):
     response.headers['Access-Control-Allow-Origin'] = 'https://kg-for-test.s3.amazonaws.com'
     return response
-
-if __name__ == '__main__':
-    server.run(host='0.0.0.0', port=5000)

@@ -36,10 +36,29 @@ def run_terraform_deploy(user_id):
     upload_thread.start()
 
     try:
-        subprocess.run(["terraform", "init"], check=True)
+        workspace_name = f"customer_{user_id}"
+        terraform_dir = f"/home/ec2-user/customers/{user_id}"
+
+        # Ensure the terraform_dir exists
+        if not os.path.exists(terraform_dir):
+            raise FileNotFoundError(f"Terraform directory not found: {terraform_dir}")
+
+        # Check if main.tf exists in the specified directory
+        if not os.path.exists(os.path.join(terraform_dir, 'main.tf')):
+            raise FileNotFoundError(f"main.tf not found in: {terraform_dir}")
+
+        # Create and select workspace
+        subprocess.run(["terraform", "-chdir=" + terraform_dir, "workspace", "new", workspace_name], check=False, capture_output=True)
+        subprocess.run(["terraform", "-chdir=" + terraform_dir, "workspace", "select", workspace_name], check=True)
+
+        # Initialize Terraform
+        subprocess.run(["terraform", "-chdir=" + terraform_dir, "init"], check=True)
+
+        # Apply Terraform configuration
+        os.chdir(terraform_dir)
         with open(output_file, 'w') as f:
             process = subprocess.Popen(
-                ["terraform", "apply", "-auto-approve"],
+                ["terraform", "-chdir=" + terraform_dir, "apply", "-auto-approve"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True
@@ -51,6 +70,8 @@ def run_terraform_deploy(user_id):
             process.wait()
             if process.returncode != 0:
                 raise subprocess.CalledProcessError(process.returncode, process.args)
+            
+        print(f"Terraform apply completed successfully in workspace: {workspace_name}")
 
         # Stop the upload thread
         stop_upload.set()

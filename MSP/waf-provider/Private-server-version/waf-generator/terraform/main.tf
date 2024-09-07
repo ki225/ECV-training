@@ -145,6 +145,9 @@ resource "aws_instance" "flask_server" {
       sudo ln -s /usr/bin/python3.8 /usr/bin/python3
       sudo ln -s /usr/bin/pydoc3.8 /usr/bin/pydoc
       sudo yum install -y python3 python3-pip
+      sudo yum install -y yum-utils
+      sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+      sudo yum -y install terraform
 
       pip3 install flask
       pip3 install pydantic
@@ -329,7 +332,7 @@ resource "aws_api_gateway_integration" "get_ip_blocks_integration" {
   resource_id             = aws_api_gateway_resource.ip_blocks.id
   http_method             = aws_api_gateway_method.get_ip_blocks.http_method
   integration_http_method = "GET"
-  type                    = "HTTP_PROXY"
+  type                    = "HTTP"
   uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/ip-blocks"
   connection_type         = "VPC_LINK"
   connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
@@ -341,7 +344,7 @@ resource "aws_api_gateway_integration" "post_ip_blocks_integration" {
   resource_id             = aws_api_gateway_resource.ip_blocks.id
   http_method             = aws_api_gateway_method.post_ip_blocks.http_method
   integration_http_method = "POST"
-  type                     = "HTTP_PROXY"
+  type                     = "HTTP"
   uri                      = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/ip-blocks"
   connection_type         = "VPC_LINK"
   connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
@@ -375,6 +378,7 @@ resource "aws_api_gateway_method_response" "post_ip_blocks_response" {
   status_code = "200"
   depends_on = [ aws_api_gateway_integration.post_ip_blocks_integration ]
 }
+
 
 resource "aws_api_gateway_method_response" "cors_method_response-ipblocks" {
   rest_api_id = aws_api_gateway_rest_api.api.id
@@ -415,6 +419,7 @@ resource "aws_api_gateway_integration_response" "post_ip_blocks_integration_resp
     aws_api_gateway_method_response.post_ip_blocks_response 
   ]
 }
+
 
 resource "aws_api_gateway_integration_response" "cors_integration_response-ipblocks" {
   rest_api_id = aws_api_gateway_rest_api.api.id
@@ -462,7 +467,7 @@ resource "aws_api_gateway_integration" "get_rules_integration" {
   resource_id             = aws_api_gateway_resource.rules.id
   http_method             = aws_api_gateway_method.get_rules.http_method
   integration_http_method = "GET"
-  type                    = "HTTP_PROXY"
+  type                    = "HTTP"
   uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/rules"
 
   connection_type         = "VPC_LINK"
@@ -475,7 +480,7 @@ resource "aws_api_gateway_integration" "post_rules_integration" {
   resource_id             = aws_api_gateway_resource.rules.id
   http_method             = aws_api_gateway_method.post_rules.http_method
   integration_http_method = "POST"
-  type                    = "HTTP_PROXY"
+  type                    = "HTTP"
   uri                     = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/rules"
 
   connection_type         = "VPC_LINK"
@@ -506,11 +511,22 @@ resource "aws_api_gateway_method_response" "get_rules_response" {
   depends_on = [ aws_api_gateway_integration.get_rules_integration ]
 }
 
-resource "aws_api_gateway_method_response" "post_rules_response" {
+resource "aws_api_gateway_method_response" "post_rules_response_200" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   resource_id = aws_api_gateway_resource.rules.id
   http_method = aws_api_gateway_method.post_rules.http_method
   status_code = "200"
+  depends_on = [ aws_api_gateway_integration.post_rules_integration ]
+}
+
+resource "aws_api_gateway_method_response" "post_rules_response_400" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  resource_id = aws_api_gateway_resource.rules.id
+  http_method = aws_api_gateway_method.post_rules.http_method
+  status_code = "400"
+  response_models = {
+    "application/json" = "Error"
+  }
   depends_on = [ aws_api_gateway_integration.post_rules_integration ]
 }
 
@@ -540,12 +556,22 @@ resource "aws_api_gateway_integration_response" "get_rules_integration_response"
   depends_on = [  aws_api_gateway_method_response.get_rules_response ]
 }
 
-resource "aws_api_gateway_integration_response" "post_rules_integration_response" {
+resource "aws_api_gateway_integration_response" "post_rules_integration_response_200" {
   rest_api_id = aws_api_gateway_rest_api.api.id
   resource_id = aws_api_gateway_resource.rules.id
   http_method = aws_api_gateway_method.post_rules.http_method
-  status_code = aws_api_gateway_method_response.post_rules_response.status_code
-  depends_on = [ aws_api_gateway_method_response.post_rules_response ]
+  selection_pattern = "2\\d{2}"
+  status_code = aws_api_gateway_method_response.post_rules_response_200.status_code
+  depends_on = [ aws_api_gateway_method_response.post_rules_response_200 ]
+}
+
+resource "aws_api_gateway_integration_response" "post_rules_integration_response_400" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  resource_id = aws_api_gateway_resource.rules.id
+  http_method = aws_api_gateway_method.post_rules.http_method
+  selection_pattern = "4\\d{2}"
+  status_code = aws_api_gateway_method_response.post_rules_response_400.status_code
+  depends_on = [ aws_api_gateway_method_response.post_rules_response_400 ]
 }
 
 resource "aws_api_gateway_integration_response" "cors_integration_response-rules" {
@@ -562,22 +588,23 @@ resource "aws_api_gateway_integration_response" "cors_integration_response-rules
   depends_on = [ aws_api_gateway_method_response.cors_method_response-rules ]
 }
 
+
 # deployment
-resource "aws_api_gateway_deployment" "deployment" {
-  rest_api_id = aws_api_gateway_rest_api.api.id
-  stage_name  = "waf-stage"
-  triggers = {
-    redeployment = sha1(jsonencode(aws_api_gateway_rest_api.api.id))
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-  depends_on = [
-      aws_api_gateway_integration.get_ip_blocks_integration, 
-      aws_api_gateway_integration.post_ip_blocks_integration,
-      aws_api_gateway_integration.cors_integration-ipblocks
-      ]
-}
+# resource "aws_api_gateway_deployment" "deployment" {
+#   rest_api_id = aws_api_gateway_rest_api.api.id
+#   stage_name  = "waf-stage"
+#   triggers = {
+#     redeployment = sha1(jsonencode(aws_api_gateway_rest_api.api.id))
+#   }
+#   lifecycle {
+#     create_before_destroy = true
+#   }
+#   depends_on = [
+#       aws_api_gateway_integration.get_ip_blocks_integration, 
+#       aws_api_gateway_integration.post_ip_blocks_integration,
+#       aws_api_gateway_integration.cors_integration-ipblocks
+#       ]
+# }
 
 resource "aws_api_gateway_deployment" "deployment2" {
   rest_api_id = aws_api_gateway_rest_api.api.id
@@ -590,7 +617,8 @@ resource "aws_api_gateway_deployment" "deployment2" {
   }
   depends_on = [
       aws_api_gateway_integration_response.get_rules_integration_response,
-      aws_api_gateway_integration_response.post_rules_integration_response,
+      aws_api_gateway_integration_response.post_rules_integration_response_200,
+      aws_api_gateway_integration_response.post_rules_integration_response_400,
       aws_api_gateway_integration.cors_integration-rules
   ]
 }
@@ -598,7 +626,7 @@ resource "aws_api_gateway_deployment" "deployment2" {
 # ======================== S3 ==================================================
 
 resource "aws_s3_bucket" "kg_frontend_bucket" {
-  bucket = "kg-waf-manager-front-end-server"  
+  bucket = "waf-manager-storing-user-data"  
 
   tags = {
     Name        = "kg-s3"

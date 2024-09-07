@@ -2,7 +2,7 @@
 from pydantic import BaseModel, Field, RootModel, TypeAdapter
 from typing import List, Literal, Optional, Union, Dict, Any
 import json
-import os
+import s3_handler
 
 # ------------------------- AggregateKeyType -------------------------
 class TextTransformation(BaseModel):
@@ -13,11 +13,9 @@ class TextTransformation(BaseModel):
     Priority: int
 
 class QueryStringKey(BaseModel):
-    # Query_String: Dict[Literal["TextTransformations"], List[TextTransformation]]
     Text_Transformations: List[TextTransformation]
 
 class QueryArgumentKey(BaseModel):
-    # Query_Argument: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
     Name: str
     Text_Transformations: List[TextTransformation]
 
@@ -25,7 +23,6 @@ class LabelNamespaceKey(BaseModel):
     Label_Namespace: Dict[Literal["Namespace"], str]
 
 class HeaderKey(BaseModel):
-    # Header: Dict[Literal["Name", "TextTransformations"], Union[str, List[TextTransformation]]]
     Name: str
     Text_Transformations: List[TextTransformation]
 
@@ -174,7 +171,7 @@ class RegexPatternSetReferenceStatement(BaseModel):
 class RegexMatchStatement(BaseModel):
     Field_To_Match: FieldToMatch
     Text_Transformations: List[TextTransformation] = Field(..., max_items=10)
-    Regex_String: str # self defined
+    Regex_String: str 
 
 class SizeConstraintStatement(BaseModel):
     Field_To_Match: FieldToMatch
@@ -308,7 +305,7 @@ class ImmunityTimeProperty(BaseModel):
 class CaptchaConfig(BaseModel):
     Immunity_Time_Property: ImmunityTimeProperty
 
-# Action Models
+# ================================================= Action Models =====================================
 class BlockAction(BaseModel):
     Custom_Response: Optional[CustomResponse] = None
 
@@ -334,8 +331,6 @@ class Action(BaseModel):
 
 
 # ======================================= Rule Package =======================================
-
-
 class xssRule(BaseModel):
     Rule_Id: str
     Chosen: bool
@@ -380,7 +375,6 @@ class RuleLabel(BaseModel):
     Key: str
 
 # ======================================= IP Rule =======================================
-
 class Rule(BaseModel):
     Name: str
     Priority: int
@@ -393,7 +387,6 @@ class Rules(BaseModel):
     Rule_Created: Optional[List[Rule]] = None
 
 # ================================== Base ==================================
-
 class Resource(BaseModel):
     Type: Literal[
         "cloudfront",
@@ -422,16 +415,6 @@ class IPRule(BaseModel):
     Action: str
     CIDR: str
 
-# class RuleInfo(BaseModel):
-#     Name: str
-#     Id: int
-#     Priority: int
-
-# class RulePrioritization(BaseModel):
-#     Description: str
-#     Order: list[RuleInfo]
-
-
 class WAFConfig(BaseModel):
     Resource: Resource
     Waf: WAF
@@ -441,10 +424,47 @@ class WAFConfig(BaseModel):
     # Rule_Prioritization: RulePrioritization
 
 # =========================================== functions ============================================
+import json
+
+def get_iam_role_by_userid(data, target_userid):
+    for item in data:
+        if item["UserId"] == str(target_userid):
+            return item["IAMRole"]
+    return None  
+
+def get_user_iam_role(user_id):
+    all_data = s3_handler.get_s3_object('kg-for-test', 'user-credential.json')
+    data = json.loads(all_data)
+    iam_role = get_iam_role_by_userid(data, user_id)
+    return iam_role
+
+
+def generate_package_rule(target_rule):
+    ruleid = str(target_rule["Rule_Id"])
+    index = ruleid.find("-")
+    object_key = f"packageRules/{ruleid[:index]}.json"
+    try:
+        rules = s3_handler.get_s3_object('kg-for-test', object_key)
+        decode_str = rules.decode('utf-8')  
+        rules = json.loads(decode_str)
+
+        for rule in rules:
+            if rule["Rule_Id"] == target_rule["Rule_Id"]:
+                config_str = rule["Rule_Configuration"]
+                config_list = config_str.split("\\n")
+                return "\n".join(config_list)
+    except Exception as e:
+        print(f"An unexpected error occurred: {str(e)}")
+        return None
+    
+
+
 def generate_terraform(config: json) -> str:
-    # config_data = json.loads(config)
     waf_config = TypeAdapter(WAFConfig).validate_python(config)
-    customer_credential = "<customer_role>"   # IAM role ARN
+    accountId_start = waf_config.Resource.Resource_Arn.replace(':', 'x', 3).find(':')+1
+    accountId_end = waf_config.Resource.Resource_Arn.replace(':', 'x', 4).find(':')
+    user_id = waf_config.Resource.Resource_Arn[accountId_start:accountId_end ]
+    customer_credential = get_user_iam_role(user_id)
 
     terraform_config = f"""
     # AWS Provider
@@ -482,7 +502,7 @@ def generate_terraform(config: json) -> str:
     }}
 
     """
-    return terraform_config
+    return terraform_config, user_id
 
 
 cate_dict = {"SQLi_Package": "SQLi_Set", "XSS_Package": "XSS_Set"}
@@ -507,32 +527,6 @@ def generate_rules(rules) -> str:
             continue
     return "\n".join(all_rules)
 
-rules_categories = ["SQLi", "XSS"]
-def generate_package_rule(target_rule):
-    ruleid = str(target_rule["Rule_Id"])
-    index = ruleid.find("-")
-    priority = target_rule["Priority"]
-
-    file_path = f"packageRules/{ruleid[:index]}.json"
-    try:
-        with open(file_path, 'r') as file:
-            data = json.load(file)
-            for rule in data:
-                if rule["Rule_Id"] == target_rule["Rule_Id"]:
-                    config_str = rule["Rule_Configuration"]
-                    config_list = config_str.split("\\n")
-                    # combine all of them
-                    print("\n".join(config_list))
-                    return "\n".join(config_list)
-    except FileNotFoundError:
-        print(f"Error: The file '{file_path}' was not found.")
-        return None
-    except json.JSONDecodeError:
-        print(f"Error: The file '{file_path}' does not contain valid JSON.")
-        return None
-    except Exception as e:
-        print(f"An unexpected error occurred: {str(e)}")
-        return None
 
 def generate_cus_rule(rule: Rule) -> str:
     rule_config = f"""
@@ -555,7 +549,6 @@ def generate_cus_rule(rule: Rule) -> str:
 
 
 def generate_action(action: Action) -> str:
-    # terraform require nested block to be in multiline
     if action.Block:
         return f"""action {{
                     block {{}}
@@ -581,15 +574,12 @@ def generate_action(action: Action) -> str:
 
 # ---------------------------------- statement ----------------------------------------------------
 def generate_geo(geo_statement):
-    # terraform only allow double quotes around country code
     country_codes_str = ", ".join(f'"{code}"' for code in geo_statement.Country_Codes)
     return f"""
         geo_match_statement {{ 
             country_codes = [{country_codes_str}] 
         }}
     """
-
-
 
 def generate_rate_based_statement(rate_based_statement):
     return f"""

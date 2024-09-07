@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terraform WebSocket Example</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Terraform Execution Output</h1>
+    <button id="start-button">Start Terraform</button>
+    <pre id="output"></pre>
+
+    <script>
+        // Connect to WebSocket server at the specified IP and port
+        const socket = io('http://54.175.240.135:5000');
+    
+        document.getElementById('start-button').addEventListener('click', () => {
+            socket.emit('run_terraform');
+        });
+    
+        socket.on('terraform_output', (data) => {
+            document.getElementById('output').textContent += data.data;
+        });
+    
+        socket.on('connect', () => {
+            console.log('Connected to the server');
+        });
+    
+        socket.on('disconnect', () => {
+            console.log('Disconnected from the server');
+        });
+    </script>
+</body>
+</html>
+
+
+

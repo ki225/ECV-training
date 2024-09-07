@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic API Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Dynamic API Data</h1>
+    <div id="content">Loading...</div>
+    <button onclick="fetchData()">Refresh Data</button>
+
+    <script>
+        const apiUrl = 'https://pb1wsmy0u2.execute-api.us-east-1.amazonaws.com/waf-stage/v1/waf/rules:5000';
+        
+        async function fetchData() {
+            try {
+                const response = await axios.get(apiUrl);
+                const data = response.data;
+                document.getElementById('content').innerHTML = `
+                    <p>Message: ${data.message}</p>
+                    <p>Data: ${data.data.join(', ')}</p>
+                `;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('content').innerHTML = 'Error fetching data';
+            }
+        }
+
+        // Initial fetch
+        fetchData();
+
+        // Set up polling every 5 seconds (adjust as needed)
+        setInterval(fetchData, 5000);
+    </script>
+</body>
+</html>

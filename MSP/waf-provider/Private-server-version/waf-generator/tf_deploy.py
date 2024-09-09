@@ -26,14 +26,12 @@ def run_terraform_command(cmd, output_file, account_id):
 
 def delete_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
-        # 首先切換到默認工作區
         run_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "select", "default"],
             output_file,
             account_id
         )
         
-        # 然後刪除指定的工作區
         delete_output = run_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "delete", workspace_name],
             output_file,
@@ -52,7 +50,6 @@ def delete_workspace(terraform_dir, workspace_name, output_file, account_id):
 
 def ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
-        # 檢查工作區是否存在
         list_output = run_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "list"],
             output_file,
@@ -63,7 +60,6 @@ def ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
             if not delete_workspace(terraform_dir, workspace_name, output_file, account_id):
                 raise Exception(f"Failed to delete existing workspace '{workspace_name}'")
         
-        # 創建新的工作區
         create_output = run_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "new", workspace_name],
             output_file,
@@ -95,14 +91,12 @@ def run_terraform_deploy(account_id):
         if not os.path.exists(os.path.join(terraform_dir, 'main.tf')):
             raise FileNotFoundError(f"main.tf not found in: {terraform_dir}")
 
-        # 確保工作區存在（如果已存在則刪除並重新創建）
         if not ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
             raise Exception("Failed to create workspace")
 
-        # 執行 Terraform 命令
         commands = [
             ["terraform", "-chdir=" + terraform_dir, "init"],
-            ["terraform", "-chdir=" + terraform_dir, "apply", "-auto-approve", "-verbose"]
+            ["terraform", "-chdir=" + terraform_dir, "apply", "-auto-approve"]
         ]
 
         for cmd in commands:
@@ -110,7 +104,6 @@ def run_terraform_deploy(account_id):
 
         print(f"Terraform apply completed successfully for account {account_id} in workspace: {workspace_name}")
 
-        # 這裡可以添加 S3 上傳邏輯
 
         return jsonify({
             "status": "success",

@@ -91,40 +91,28 @@ def rule_ip():
                 
                 try:
                     with open(f"{directory}/main.tf", 'w') as file:
-                        file.write(rules_data)
-                        s3_handler.upload_to_s3_with_content("kg-for-test", f"user_data/{user_id}", "main.tf", rules_data)
-                        tf_deploy.run_terraform_deploy(user_id)
-                        
+                        try:
+                            file.write(rules_data)
+                        except:
+                            print("Error writing terraform file")
+                            return jsonify({"message": "Error uploading terraform file", "status": "error"}), 412
+                        try:
+                            s3_handler.upload_to_s3_with_content("kg-for-test", f"user_data/{user_id}", "main.tf", rules_data)
+                        except:
+                            print("Error storing in s3")
+                            return jsonify({"message": "Error storing in s3", "status": "error"}), 413
+                        try:
+                            tf_deploy.run_terraform_deploy(user_id)
+                        except:
+                            print("Error running terraform deploy")
+                            return jsonify({"message": "Error running terraform deploy", "status": "error"}), 414
+                        return jsonify({"message": "Success", "status": "success"}), 200
                 except:
-                    print("Error writing terraform file")
-                    return jsonify({"message": "Error uploading terraform file", "status": "error"}), 412
-                
-                # tf_deploy.run_terraform_deploy(user_id)
-                try:
-                    file.write(rules_data)
-                    os.chdir(f"{directory}")
-                    tf_deploy.run_terraform_deploy(user_id)
-                    print("success")
-                    return jsonify({"message": "Success", "status": "success"}), 200
-                except Exception as e:
-                    error_message = {
-                        "status": "error",
-                        "message": "An error occurred while deploying Terraform",
-                        "error": str(e),
-                        "trace": traceback.format_exc()
-                    }
-                    print(error_message)
-                    return (jsonify(error_message)), 413
+                    print("Error opening terraform file")
+                    return jsonify({"message": "Error uploading terraform file", "status": "error"}), 415
             except Exception as e:
-                error_message = {
-                    "status": "error",
-                    "message": "An error occurred while generating Terraform",
-                    "error": str(e),
-                    "trace": traceback.format_exc()
-                }
-                print(error_message)
-                return (jsonify(error_message)), 414
-
+                print(e)
+                return jsonify({"message": "Error generating terraform", "error": str(e), "status": "error"}), 416
     elif request.method == 'GET':
         return jsonify({"data": rules_data})
 

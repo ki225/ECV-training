@@ -5,6 +5,9 @@ import time
 import s3_handler
 from datetime import datetime
 from flask import jsonify
+from tf_output import filter_terraform_output
+import re
+import sys
 
 def upload_if_changed(output_file, bucket_name, s3_key, last_modified):
     try:
@@ -23,63 +26,68 @@ def periodic_upload(output_file, bucket_name, s3_key, stop_event):
             upload_if_changed(output_file, bucket_name, s3_key, last_modified)
         time.sleep(1)  # Check every second for changes
 
-def run_terraform_deploy(user_id):
-    output_file = "terraform_output.txt"
+def run_terraform_deploy(account_id):
+    output_file = f"terraform_output_{account_id}.txt"
+    filtered_output_file = f"filtered_terraform_output_{account_id}.txt"
     bucket_name = "kg-for-test"
-    s3_key = f"user_data/{user_id}/{output_file}"
+    s3_key = f"user_data/{account_id}/{filtered_output_file}"
 
     stop_upload = threading.Event()
     upload_thread = threading.Thread(
         target=periodic_upload,
-        args=(output_file, bucket_name, s3_key, stop_upload)
+        args=(filtered_output_file, bucket_name, s3_key, stop_upload)
     )
     upload_thread.start()
 
     try:
-        workspace_name = f"customer_{user_id}"
-        terraform_dir = f"/home/ec2-user/customers/{user_id}"
+        workspace_name = f"customer_{account_id}"
+        terraform_dir = f"/home/ec2-user/customers/{account_id}"
 
-        # Ensure the terraform_dir exists
         if not os.path.exists(terraform_dir):
             raise FileNotFoundError(f"Terraform directory not found: {terraform_dir}")
 
-        # Check if main.tf exists in the specified directory
         if not os.path.exists(os.path.join(terraform_dir, 'main.tf')):
             raise FileNotFoundError(f"main.tf not found in: {terraform_dir}")
 
-        # Create and select workspace
         subprocess.run(["terraform", "-chdir=" + terraform_dir, "workspace", "new", workspace_name], check=False, capture_output=True)
         subprocess.run(["terraform", "-chdir=" + terraform_dir, "workspace", "select", workspace_name], check=True)
-
-        # Initialize Terraform
         subprocess.run(["terraform", "-chdir=" + terraform_dir, "init"], check=True)
 
-        # Apply Terraform configuration
         os.chdir(terraform_dir)
-        with open(output_file, 'w') as f:
+        with open(output_file, 'w') as f, open(filtered_output_file, 'w') as filtered_f:
             process = subprocess.Popen(
-                ["terraform", "-chdir=" + terraform_dir, "apply", "-auto-approve"],
+                ["terraform", "-chdir=" + terraform_dir, "apply", "-auto-approve", "-verbose"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                universal_newlines=True
+                universal_newlines=True,
+                bufsize=1
             )
-            for line in process.stdout:
-                print(line, end='')  # Print to console
-                f.write(line)        # Write to file
-                f.flush()            # Ensure it's written immediately
+            output_buffer = ""
+            for line in process.stdout:   
+                sys.stdout.flush()             
+                if account_id in line or not re.search(r'\d{12}', line):
+                    f.write(line)
+                    f.flush()
+                    output_buffer += line
+                    current_filtered_output = filter_terraform_output(output_buffer)
+                    if current_filtered_output != last_filtered_output:
+                        filtered_f.write(current_filtered_output[len(last_filtered_output):])
+                        filtered_f.flush()
+                        last_filtered_output = current_filtered_output
+
+                    print(f"[Account {account_id}] {line}", end='')
+                
             process.wait()
             if process.returncode != 0:
                 raise subprocess.CalledProcessError(process.returncode, process.args)
             
-        print(f"Terraform apply completed successfully in workspace: {workspace_name}")
+        print(f"Terraform apply completed successfully for account {account_id} in workspace: {workspace_name}")
 
-        # Stop the upload thread
         stop_upload.set()
         upload_thread.join()
 
-        # Final upload after completion
-        s3_handler.upload_to_s3_with_path(output_file, bucket_name, s3_key)
-        print(f"Final Terraform output uploaded to s3://{bucket_name}/{s3_key}")
+        s3_handler.upload_to_s3_with_path(filtered_output_file, bucket_name, s3_key)
+        print(f"Filtered Terraform output for account {account_id} uploaded to s3://{bucket_name}/{s3_key}")
 
         return jsonify({
             "status": "success",
@@ -94,12 +102,12 @@ def run_terraform_deploy(user_id):
         upload_thread.join()
         return jsonify({
             "status": "error",
-            "message": f"Terraform command failed: {str(e)}"
+            "message": f"Terraform command failed for account {account_id}: {str(e)}"
         }), 500
     except Exception as e:
         stop_upload.set()
         upload_thread.join()
         return jsonify({
             "status": "error",
-            "message": f"An error occurred: {str(e)}"
+            "message": f"An error occurred for account {account_id}: {str(e)}"
         }), 500

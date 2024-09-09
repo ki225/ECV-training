@@ -24,23 +24,46 @@ def run_terraform_command(cmd, output_file, account_id):
             raise subprocess.CalledProcessError(process.returncode, cmd, ''.join(output))
         return ''.join(output)
 
-def ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
+def delete_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
-        # 首先嘗試選擇工作區
-        select_output = run_terraform_command(
-            ["terraform", "-chdir=" + terraform_dir, "workspace", "select", workspace_name],
+        # 首先切換到默認工作區
+        run_terraform_command(
+            ["terraform", "-chdir=" + terraform_dir, "workspace", "select", "default"],
             output_file,
             account_id
         )
-        print(f"Workspace selection output: {select_output}")
-        if "Switched to workspace" in select_output:
-            print(f"Successfully selected existing workspace '{workspace_name}'")
+        
+        # 然後刪除指定的工作區
+        delete_output = run_terraform_command(
+            ["terraform", "-chdir=" + terraform_dir, "workspace", "delete", workspace_name],
+            output_file,
+            account_id
+        )
+        print(f"Workspace deletion output: {delete_output}")
+        if f"Deleted workspace \"{workspace_name}\"" in delete_output:
+            print(f"Successfully deleted workspace '{workspace_name}'")
             return True
+        else:
+            print(f"Failed to delete workspace '{workspace_name}'")
+            return False
     except subprocess.CalledProcessError as e:
-        print(f"Workspace selection failed, attempting to create: {e}")
-    
-    # 如果選擇失敗，嘗試創建工作區
+        print(f"Error deleting workspace: {e}")
+        return False
+
+def ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
+        # 檢查工作區是否存在
+        list_output = run_terraform_command(
+            ["terraform", "-chdir=" + terraform_dir, "workspace", "list"],
+            output_file,
+            account_id
+        )
+        if workspace_name in list_output:
+            print(f"Workspace '{workspace_name}' exists. Deleting it.")
+            if not delete_workspace(terraform_dir, workspace_name, output_file, account_id):
+                raise Exception(f"Failed to delete existing workspace '{workspace_name}'")
+        
+        # 創建新的工作區
         create_output = run_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "new", workspace_name],
             output_file,
@@ -54,7 +77,7 @@ def ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
             print(f"Failed to create workspace '{workspace_name}'")
             return False
     except subprocess.CalledProcessError as e:
-        print(f"Workspace creation failed: {e}")
+        print(f"Error managing workspace: {e}")
         return False
 
 def run_terraform_deploy(account_id):
@@ -72,9 +95,9 @@ def run_terraform_deploy(account_id):
         if not os.path.exists(os.path.join(terraform_dir, 'main.tf')):
             raise FileNotFoundError(f"main.tf not found in: {terraform_dir}")
 
-        # 確保工作區存在並被選中
+        # 確保工作區存在（如果已存在則刪除並重新創建）
         if not ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
-            raise Exception("Failed to select or create workspace")
+            raise Exception("Failed to create workspace")
 
         # 執行 Terraform 命令
         commands = [

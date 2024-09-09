@@ -1,43 +1,66 @@
-import threading
 import subprocess
 import os
-import time
-import s3_handler
-from datetime import datetime
 from flask import jsonify
-from tf_output import filter_terraform_output
-import re
-import sys
+from datetime import datetime
 
-def upload_if_changed(output_file, bucket_name, s3_key, last_modified):
+def run_terraform_command(cmd, output_file, account_id):
+    with open(output_file, 'a') as f:
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            bufsize=1
+        )
+        output = []
+        for line in iter(process.stdout.readline, ''):
+            f.write(line)
+            f.flush()
+            output.append(line)
+            print(f"[Account {account_id}] {line}", end='', flush=True)
+        
+        process.wait()
+        if process.returncode != 0:
+            raise subprocess.CalledProcessError(process.returncode, cmd, ''.join(output))
+        return ''.join(output)
+
+def ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
-        current_modified = os.path.getmtime(output_file)
-        if current_modified != last_modified[0]:
-            s3_handler.upload_to_s3_with_path(output_file, bucket_name, s3_key)
-            last_modified[0] = current_modified
-            print(f"Uploaded {output_file} to s3://{bucket_name}/{s3_key}")
-    except Exception as e:
-        print(f"Error during upload: {str(e)}")
-
-def periodic_upload(output_file, bucket_name, s3_key, stop_event):
-    last_modified = [0]  # Using a list to make it mutable within the function
-    while not stop_event.is_set():
-        if os.path.exists(output_file):
-            upload_if_changed(output_file, bucket_name, s3_key, last_modified)
-        time.sleep(1)  # Check every second for changes
+        # 首先嘗試選擇工作區
+        select_output = run_terraform_command(
+            ["terraform", "-chdir=" + terraform_dir, "workspace", "select", workspace_name],
+            output_file,
+            account_id
+        )
+        print(f"Workspace selection output: {select_output}")
+        if "Switched to workspace" in select_output:
+            print(f"Successfully selected existing workspace '{workspace_name}'")
+            return True
+    except subprocess.CalledProcessError as e:
+        print(f"Workspace selection failed, attempting to create: {e}")
+    
+    # 如果選擇失敗，嘗試創建工作區
+    try:
+        create_output = run_terraform_command(
+            ["terraform", "-chdir=" + terraform_dir, "workspace", "new", workspace_name],
+            output_file,
+            account_id
+        )
+        print(f"Workspace creation output: {create_output}")
+        if "Created and switched to workspace" in create_output:
+            print(f"Successfully created new workspace '{workspace_name}'")
+            return True
+        else:
+            print(f"Failed to create workspace '{workspace_name}'")
+            return False
+    except subprocess.CalledProcessError as e:
+        print(f"Workspace creation failed: {e}")
+        return False
 
 def run_terraform_deploy(account_id):
     output_file = f"terraform_output_{account_id}.txt"
-    filtered_output_file = f"filtered_terraform_output_{account_id}.txt"
     bucket_name = "kg-for-test"
-    s3_key = f"user_data/{account_id}/{filtered_output_file}"
-
-    stop_upload = threading.Event()
-    upload_thread = threading.Thread(
-        target=periodic_upload,
-        args=(filtered_output_file, bucket_name, s3_key, stop_upload)
-    )
-    upload_thread.start()
+    s3_key = f"user_data/{account_id}/{output_file}"
 
     try:
         workspace_name = f"customer_{account_id}"
@@ -49,45 +72,22 @@ def run_terraform_deploy(account_id):
         if not os.path.exists(os.path.join(terraform_dir, 'main.tf')):
             raise FileNotFoundError(f"main.tf not found in: {terraform_dir}")
 
-        subprocess.run(["terraform", "-chdir=" + terraform_dir, "workspace", "new", workspace_name], check=False, capture_output=True)
-        subprocess.run(["terraform", "-chdir=" + terraform_dir, "workspace", "select", workspace_name], check=True)
-        subprocess.run(["terraform", "-chdir=" + terraform_dir, "init"], check=True)
+        # 確保工作區存在並被選中
+        if not ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
+            raise Exception("Failed to select or create workspace")
 
-        os.chdir(terraform_dir)
-        with open(output_file, 'w') as f, open(filtered_output_file, 'w') as filtered_f:
-            process = subprocess.Popen(
-                ["terraform", "-chdir=" + terraform_dir, "apply", "-auto-approve", "-verbose"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                universal_newlines=True,
-                bufsize=1
-            )
-            output_buffer = ""
-            for line in process.stdout:   
-                sys.stdout.flush()             
-                if account_id in line or not re.search(r'\d{12}', line):
-                    f.write(line)
-                    f.flush()
-                    output_buffer += line
-                    current_filtered_output = filter_terraform_output(output_buffer)
-                    if current_filtered_output != last_filtered_output:
-                        filtered_f.write(current_filtered_output[len(last_filtered_output):])
-                        filtered_f.flush()
-                        last_filtered_output = current_filtered_output
+        # 執行 Terraform 命令
+        commands = [
+            ["terraform", "-chdir=" + terraform_dir, "init"],
+            ["terraform", "-chdir=" + terraform_dir, "apply", "-auto-approve", "-verbose"]
+        ]
 
-                    print(f"[Account {account_id}] {line}", end='')
-                
-            process.wait()
-            if process.returncode != 0:
-                raise subprocess.CalledProcessError(process.returncode, process.args)
-            
+        for cmd in commands:
+            run_terraform_command(cmd, output_file, account_id)
+
         print(f"Terraform apply completed successfully for account {account_id} in workspace: {workspace_name}")
 
-        stop_upload.set()
-        upload_thread.join()
-
-        s3_handler.upload_to_s3_with_path(filtered_output_file, bucket_name, s3_key)
-        print(f"Filtered Terraform output for account {account_id} uploaded to s3://{bucket_name}/{s3_key}")
+        # 這裡可以添加 S3 上傳邏輯
 
         return jsonify({
             "status": "success",
@@ -98,16 +98,10 @@ def run_terraform_deploy(account_id):
         }), 200
 
     except subprocess.CalledProcessError as e:
-        stop_upload.set()
-        upload_thread.join()
-        return jsonify({
-            "status": "error",
-            "message": f"Terraform command failed for account {account_id}: {str(e)}"
-        }), 500
+        error_message = f"Terraform command failed for account {account_id}: {str(e)}"
+        print(error_message)
+        return jsonify({"status": "error", "message": error_message}), 500
     except Exception as e:
-        stop_upload.set()
-        upload_thread.join()
-        return jsonify({
-            "status": "error",
-            "message": f"An error occurred for account {account_id}: {str(e)}"
-        }), 500
+        error_message = f"An error occurred for account {account_id}: {str(e)}"
+        print(error_message)
+        return jsonify({"status": "error", "message": error_message}), 500

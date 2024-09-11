@@ -501,6 +501,14 @@ def generate_terraform(config: json) -> str:
         resource_arn = "{waf_config.Resource.Resource_Arn}"
         web_acl_arn  = aws_wafv2_web_acl.{waf_config.Waf.Name}.arn
     }}
+
+    output "waf_acl_id" {{
+        value       = aws_wafv2_web_acl.{waf_config.Waf.Name}.id
+    }}
+
+    output "waf_acl_arn" {{
+        value       = aws_wafv2_web_acl.{waf_config.Waf.Name}.arn
+    }}
     """
     return terraform_config, user_id
 

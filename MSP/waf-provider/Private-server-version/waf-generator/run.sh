@@ -1,5 +1,6 @@
-sudo yum install python3.9
-python3.9 -m venv myenv
+sudo yum update -y
+
+python3.8 -m venv myenv
 source myenv/bin/activate
 pip3 install flask
 pip3 install pydantic
@@ -20,5 +21,4 @@ sudo yum -y install terraform
 
 cd /home/ec2-user ; mkdir customers
 sudo lsof -ti:5000 | xargs kill -9
-
-hypercorn server:server --workers 4 --worker-class asyncio --backlog 100 --bind 0.0.0.0:5000
+hypercorn server:server --workers 4 --worker-class asyncio --backlog 100 --bind 0.0.0.0:5000 --keep-alive 300 --worker-timeout 600

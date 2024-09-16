@@ -3,7 +3,7 @@ import json
 import asyncio
 import aioboto3
 from botocore.exceptions import ClientError
-
+from tf_deploy import check_waf_acl_id
 
 s3 = boto3.client('s3')
 
@@ -38,3 +38,16 @@ async def upload_to_s3_with_path_async(local_file_path, bucket_name, s3_key, tim
             print(f"Error uploading file to S3: {e}")
             raise
     
+async def periodic_s3_upload(terraform_dir: str, local_file_path: str, bucket_name: str, s3_key: str, stop_event: asyncio.Event) -> None:
+    while True:
+        try:
+            await upload_to_s3_with_path_async(local_file_path, bucket_name, s3_key)
+            print("Uploaded to S3 successfully")
+        except Exception as e:
+            print(f"Error during periodic S3 upload: {e}")
+        waf_created_result = await check_waf_acl_id(terraform_dir, stop_event)
+        if waf_created_result:
+            stop_event.set()
+            break
+        await asyncio.sleep(10)
+    print("Periodic S3 upload completed")

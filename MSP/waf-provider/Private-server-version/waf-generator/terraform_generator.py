@@ -343,17 +343,17 @@ class sqliRule(BaseModel):
     Action: Optional[Literal["Block", "Allow", "Count", "Captcha", "Challenge"]]
     Priority: int
 
-class XSS(BaseModel):
+class XSS_rule(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
-    XSS_Set: List[xssRule]
+    Set: List[xssRule]
 
-class SQLi(BaseModel):
+class SQLi_rule(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
-    SQLi_Set: List[sqliRule]
+    Set: List[sqliRule]
 
 class RulePackage(BaseModel):
-    SQLi_Package: Optional[SQLi] = None
-    XSS_Package: Optional[XSS] = None
+    SQLi: Optional[SQLi_rule] = None
+    XSS: Optional[XSS_rule] = None
 
 # ======================================= Created Rule (customized rules) =======================================
 class VisibilityConfig(BaseModel):
@@ -419,7 +419,7 @@ class WAFConfig(BaseModel):
     Resource: Resource
     Waf: WAF
     Monitor_Settings: MonitorSettings
-    IP: List[IPRule]
+    IP: Optional[List[IPRule]] = None
     Rules: Rules
     # Rule_Prioritization: RulePrioritization
 
@@ -447,6 +447,7 @@ def generate_package_rule(target_rule):
         rules = s3_handler.get_s3_object('kg-for-test', object_key)
         decode_str = rules.decode('utf-8')  
         rules = json.loads(decode_str)
+        
 
         for rule in rules:
             if rule["Rule_Id"] == target_rule["Rule_Id"]:
@@ -501,11 +502,18 @@ def generate_terraform(config: json) -> str:
         web_acl_arn  = aws_wafv2_web_acl.{waf_config.Waf.Name}.arn
     }}
 
+    output "waf_acl_id" {{
+        value       = aws_wafv2_web_acl.{waf_config.Waf.Name}.id
+    }}
+
+    output "waf_acl_arn" {{
+        value       = aws_wafv2_web_acl.{waf_config.Waf.Name}.arn
+    }}
     """
     return terraform_config, user_id
 
 
-cate_dict = {"SQLi_Package": "SQLi_Set", "XSS_Package": "XSS_Set"}
+cate_dict = {"SQLi": "Set", "XSS": "Set"}
 def generate_rules(rules) -> str:
     all_rules = []
     for rule in rules.Rule_Created:
@@ -515,13 +523,11 @@ def generate_rules(rules) -> str:
             if hasattr(rules.Rule_Package, category):
                 category_obj = getattr(rules.Rule_Package, category)
                 category_obj = category_obj.dict()
-                rule_set = category_obj[set_name]
+                rule_set = category_obj["Set"]
                 for rule in rule_set:
                     result = generate_package_rule(rule)
                     if result: # prevent empty result
                         all_rules.append(result)
-            else:
-                print(f"{category} not found in Rule_Package")
         except:
             print(f"{category} not found in Rule_Package")
             continue
@@ -715,7 +721,6 @@ def generate_field_to_match(field_to_match): #  object type is <...>_Statement.F
             oversize_handling = "{field_to_match.Header_Order.Oversize_Handling}"
 
         }}
-        
         """
     elif field_to_match.Http_ is not None:
         return 'http {}'

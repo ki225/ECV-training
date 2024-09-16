@@ -2,6 +2,7 @@ import re
 
 def parse_terraform_output(output):
     summary = "Terraform Execution Summary:\n"
+
     plan_match = re.search(r'Plan: (\d+) to add, (\d+) to change, (\d+) to destroy', output)
     if plan_match:
         resources_to_add = int(plan_match.group(1))

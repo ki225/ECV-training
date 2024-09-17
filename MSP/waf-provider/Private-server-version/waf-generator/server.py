@@ -4,16 +4,17 @@ from datetime import datetime
 import re
 import terraform_generator
 import s3_handler
-from tf_deploy import run_terraform_deploy
+from tf_deploy import terraform_deploy
 import asyncio
 from typing import Dict, Any
+from CommandResult import CommandResult
 # import logger
 
 task_statuses: Dict[str, Any] = {}
 status = None
 server = Quart(__name__)
 deploy_result, status_code = -1, -1
-
+sys_status = CommandResult() # create a new object of CommandResult
 
 ip_regex = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 rules_data = None
@@ -21,31 +22,31 @@ blocked_ips = []
 reasons = []
 last_updated = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-class SystemStatus:
-    def __init__(self):
-        self.status = None # success or error
-        self.message = ""
-        self.last_updated = last_updated
-    def update_status(self, status, message):
-        self.status = status
-        self.message = message
-    def get_latest_status(self):
-        return self.status
+# class SystemStatus:
+#     def __init__(self):
+#         self.status = None # success or error
+#         self.message = ""
+#         self.last_updated = last_updated
+#     def update_status(self, status, message):
+#         self.status = status
+#         self.message = message
+#     def get_latest_status(self):
+#         return self.status
     
-sys_status = SystemStatus()
+# sys_status = SystemStatus()
 
 # A callback function that updates the task status when the deployment completes or fails.
-def update_status( future: asyncio.Future) -> None:
-    global task_statuses
-    global sys_status
-    try:
-        print("all the result:", future.result())
-        sys_status.update_status("success", future.result()[len(future.result()) - 1])
-        result = future.result()[len(future.result()) - 1]
-        task_statuses = {"message": result, "status": "success"}
-    except Exception as e:
-        task_statuses = {"error message": str(e), "status": "error"}
-        sys_status.update_status("error", str(e))
+# def update_status(future: asyncio.Future) -> None:
+#     global task_statuses
+#     global sys_status
+#     try:
+#         print("all the result:", future.result())
+#         sys_status.update_status("success", future.result()[len(future.result()) - 1])
+#         result = future.result()[len(future.result()) - 1]
+#         task_statuses = {"message": result, "status": "success"}
+#     except Exception as e:
+#         task_statuses = {"error message": str(e), "status": "error"}
+#         sys_status.update_status("error", str(e))
 
 # Retrieves the current status of a deployment task.
 async def check_deployment_status():
@@ -98,6 +99,8 @@ async def rule_ip():
     global last_updated
     global rules_data
     global task_statuses
+    global sys_status
+    
 
     new_data = None
     task_statuses = {"data": "None", "status": "inprocess"} # initialize task status
@@ -117,17 +120,14 @@ async def rule_ip():
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
-                # await s3_handler.upload_to_s3_with_content_async("kg-for-test", f"user_data/{user_id}", "generated_json.json", new_data)
                 asyncio.create_task(s3_handler.upload_to_s3_with_content_async("kg-for-test", f"user_data/{user_id}", "generated_json.json", new_data))
 
                 with open(f"{directory}/main.tf", 'w') as file:
                     file.write(rules_data)
                 await s3_handler.upload_to_s3_with_content_async("kg-for-test", f"user_data/{user_id}", "main.tf", rules_data)
                 
-                # global deploy_result, status_code 
-                # deploy_result, status_code = await tf_deploy.run_terraform_deploy(user_id)
-                task = asyncio.create_task(run_terraform_deploy(user_id))
-                task.add_done_callback(lambda t: update_status(t))
+                task = asyncio.create_task(terraform_deploy(user_id, sys_status))
+                # task.add_done_callback(lambda t: update_status(t))
 
                 return jsonify({"message": "server got data", "status": "success"}), 200
                 # return jsonify(deploy_result), status_code
@@ -138,6 +138,7 @@ async def rule_ip():
 
 @server.route('/v1/waf/rules/response', methods=['GET'])
 async def send_response():
+    global sys_status
     try:
         status = await check_deployment_status()
         print(status)
@@ -146,19 +147,21 @@ async def send_response():
             return jsonify({
                 "success": True,
                 "message": "Status retrieved successfully",
-                "data": status
+                "data": status,
+                "system_status": sys_status.get_output()
             }), 200
         else:
             return jsonify({
                 "success": True,
                 "message": "Status retrieved successfully",
-                "data": status
+                "data": status,
+                "system_status": sys_status.get_output()
             }), 400
     except Exception as e:
         return jsonify({
             "success": False,
             "message": f"Failed to retrieve status: {str(e)}",
-            "data": None
+            "data": None,
         }), 500
 
 

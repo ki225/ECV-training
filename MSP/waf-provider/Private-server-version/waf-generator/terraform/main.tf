@@ -633,20 +633,3 @@ resource "aws_s3_bucket" "kg_frontend_bucket" {
     Environment = "Dev"
   }
 }
-
-
-resource "null_resource" "flask_server" {
-  provisioner "local-exec" {
-    command = <<EOT
-      export API_GATEWAY_URL=${local.api_gateway_url}
-      export FLASK_APP=/home/ec2-user/generator/server.py
-      export FLASK_RUN_PORT=${var.flask_port}
-      python3 /home/ec2-user/server.py &
-    EOT
-  }
-
-  # Trigger recreation of this resource when the API Gateway URL changes
-  triggers = {
-    api_gateway_url = local.api_gateway_url
-  }
-}

@@ -4,9 +4,10 @@ from datetime import datetime
 import re
 import terraform_generator
 import s3_handler
-from tf_deploy import run_terraform_deploy
+from tf_deploy import terraform_deploy
 import asyncio
 from typing import Dict, Any
+from CommandResult import CommandResult
 # import logger
 
 task_statuses: Dict[str, Any] = {}
@@ -35,7 +36,7 @@ class SystemStatus:
 sys_status = SystemStatus()
 
 # A callback function that updates the task status when the deployment completes or fails.
-def update_status( future: asyncio.Future) -> None:
+def update_status(future: asyncio.Future) -> None:
     global task_statuses
     global sys_status
     try:
@@ -98,12 +99,14 @@ async def rule_ip():
     global last_updated
     global rules_data
     global task_statuses
+    sys_status1 = CommandResult() # create a new object of CommandResult
 
     new_data = None
     task_statuses = {"data": "None", "status": "inprocess"} # initialize task status
 
     if request.method == 'POST':
         if not await request.get_data():
+            sys_status1.set_result("No data received")
             return jsonify({"message": "No data received", "status": "error"}), 409
         try:
             new_data = await request.get_json()
@@ -117,16 +120,13 @@ async def rule_ip():
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
-                # await s3_handler.upload_to_s3_with_content_async("kg-for-test", f"user_data/{user_id}", "generated_json.json", new_data)
                 asyncio.create_task(s3_handler.upload_to_s3_with_content_async("kg-for-test", f"user_data/{user_id}", "generated_json.json", new_data))
 
                 with open(f"{directory}/main.tf", 'w') as file:
                     file.write(rules_data)
                 await s3_handler.upload_to_s3_with_content_async("kg-for-test", f"user_data/{user_id}", "main.tf", rules_data)
                 
-                # global deploy_result, status_code 
-                # deploy_result, status_code = await tf_deploy.run_terraform_deploy(user_id)
-                task = asyncio.create_task(run_terraform_deploy(user_id))
+                task = asyncio.create_task(terraform_deploy(user_id))
                 task.add_done_callback(lambda t: update_status(t))
 
                 return jsonify({"message": "server got data", "status": "success"}), 200

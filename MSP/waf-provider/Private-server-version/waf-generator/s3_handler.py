@@ -3,7 +3,7 @@ import json
 import asyncio
 import aioboto3
 from botocore.exceptions import ClientError
-from tf_deploy import check_waf_acl_id
+from checker import check_waf_acl_id
 
 s3 = boto3.client('s3')
 

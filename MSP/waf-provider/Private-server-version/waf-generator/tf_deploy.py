@@ -1,25 +1,49 @@
 import subprocess
 import os
-from quart import jsonify
 from datetime import datetime
 import asyncio
 import json
 from stopEvent import stopEvent
-from checker import check_waf_acl_id
 from tf_output import filter_terraform_output
 from s3_handler import periodic_s3_upload
+from CommandResult import CommandResult
 
 stop_event = stopEvent()
 
+# run the terraform command and write into file
+async def rw_terraform_command(cmd, output_file, account_id, system_status: CommandResult):
+    output = []
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.STDOUT
+    )
+    while True:
+        line = await process.stdout.readline()
+        if not line:
+            break
+        line = line.decode().strip()
+        output.append(line)
+    
+        with open(output_file, 'a') as f:
+            f.write(filter_terraform_output(line) + '\n')
+            f.flush()
+            print(f"[Account {account_id}] {line}", flush=True)
+        await process.wait()
+        if process.returncode != 0:
+            await asyncio.sleep(10)
+            raise subprocess.CalledProcessError(process.returncode, cmd, '\n'.join(output))
+        return '\n'.join(output)
+    
 async def destroy_resources_in_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
-        await run_terraform_command(
+        await rw_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "select", workspace_name],
             output_file,
             account_id
         )
         print(f"Attempting to destroy resources in workspace {workspace_name}...")
-        await run_terraform_command(
+        await rw_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "destroy", "-auto-approve"],
             output_file,
             account_id
@@ -32,7 +56,7 @@ async def destroy_resources_in_workspace(terraform_dir, workspace_name, output_f
         print(e.output)
         return False
     finally:
-        await run_terraform_command(
+        await rw_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "select", "default"],
             output_file,
             account_id
@@ -40,7 +64,7 @@ async def destroy_resources_in_workspace(terraform_dir, workspace_name, output_f
 
 async def delete_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
-        await run_terraform_command(
+        await rw_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "select", "default"],
             output_file,
             account_id
@@ -49,7 +73,7 @@ async def delete_workspace(terraform_dir, workspace_name, output_file, account_i
         if not destroy_success:
             print("Failed to destroy resources in workspace. Proceeding with deletion anyway.")
         
-        delete_output = await run_terraform_command(
+        delete_output = await rw_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "delete", "-force", workspace_name],
             output_file,
             account_id
@@ -66,34 +90,12 @@ async def delete_workspace(terraform_dir, workspace_name, output_file, account_i
         print(f"Command output: {e.output}")
         return False
 
-async def run_terraform_command(cmd, output_file, account_id):
-    with open(output_file, 'a') as f:
-        process = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT
-        )
-        output = []
-        while True:
-            line = await process.stdout.readline()
-            if not line:
-                break
-            line = line.decode().strip()
-            f.write(filter_terraform_output(line) + '\n')
-            f.flush()
-            output.append(line)
-            print(f"[Account {account_id}] {line}", flush=True)
-        
-        await process.wait()
-        if process.returncode != 0:
-            await asyncio.sleep(10)
-            raise subprocess.CalledProcessError(process.returncode, cmd, '\n'.join(output))
-        return '\n'.join(output)
+
 
 # ensure whether the workspace exist 
 async def ensure_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
-        list_output = await run_terraform_command(
+        list_output = await rw_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "list"],
             output_file,
             account_id
@@ -107,7 +109,7 @@ async def ensure_workspace(terraform_dir, workspace_name, output_file, account_i
 
 async def create_new_workspace(terraform_dir, workspace_name, output_file, account_id):
     try:
-        create_output = await run_terraform_command(
+        create_output = await rw_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "new", workspace_name],
             output_file,
             account_id
@@ -124,12 +126,13 @@ async def create_new_workspace(terraform_dir, workspace_name, output_file, accou
         return False
 
 # deploying the tf code and returning the msg for rendering
-async def run_terraform_deploy(account_id):
+async def terraform_deploy(account_id, sys_status: CommandResult):
     output_file = f"terraform_output_{account_id}.txt"
     bucket_name = "kg-for-test"
     s3_key = f"user_data/{account_id}/{output_file}"
     workspace_name = f"customer_{account_id}"
     terraform_dir = f"/home/ec2-user/customers/{account_id}"
+
     try:
         if not os.path.exists(terraform_dir):
             raise FileNotFoundError(f"Terraform directory not found: {terraform_dir}")
@@ -146,7 +149,7 @@ async def run_terraform_deploy(account_id):
         except subprocess.CalledProcessError as e:
             print(f"Error for workspace preprocessing: {e}")
         try:
-            select_result = await run_terraform_command(
+            select_result = await rw_terraform_command(
                 ["terraform", "-chdir=" + terraform_dir, "workspace", "select", workspace_name],
                 output_file,
                 account_id
@@ -166,7 +169,7 @@ async def run_terraform_deploy(account_id):
         )
 
         for cmd in commands:
-            await run_terraform_command(cmd, output_file, account_id)
+            await rw_terraform_command(cmd, output_file, account_id)
 
         stop_event.set()
         upload_task.cancel()

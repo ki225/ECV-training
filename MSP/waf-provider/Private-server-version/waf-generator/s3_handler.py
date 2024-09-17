@@ -27,7 +27,6 @@ async def upload_to_s3_with_content_async(bucket_name, folder_name, file_name, c
         except Exception as e:
             print(f"An error occurred while storing {file_name} in s3: {str(e)}")
 
-
 # Upload a file to S3
 async def upload_to_s3_with_path_async(local_file_path, bucket_name, s3_key, timeout=60):
     session = aioboto3.Session()

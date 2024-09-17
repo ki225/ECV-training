@@ -2,7 +2,6 @@ import subprocess
 import os
 from datetime import datetime
 import asyncio
-import json
 from stopEvent import stopEvent
 from tf_output import filter_terraform_output
 from s3_handler import periodic_s3_upload
@@ -26,9 +25,12 @@ async def rw_terraform_command(cmd, output_file, account_id, system_status: Comm
         output.append(line)
     
         with open(output_file, 'a') as f:
-            f.write(filter_terraform_output(line) + '\n')
+            filtered_line = filter_terraform_output(line)
+            system_status.set_output(filtered_line)
+            f.write(filtered_line + '\n')
             f.flush()
             print(f"[Account {account_id}] {line}", flush=True)
+            
         await process.wait()
         if process.returncode != 0:
             await asyncio.sleep(10)
@@ -152,7 +154,8 @@ async def terraform_deploy(account_id, sys_status: CommandResult):
             select_result = await rw_terraform_command(
                 ["terraform", "-chdir=" + terraform_dir, "workspace", "select", workspace_name],
                 output_file,
-                account_id
+                account_id,
+                sys_status
             )
             print(f"Selected workspace: {select_result}")
         except subprocess.CalledProcessError as e:
@@ -169,7 +172,7 @@ async def terraform_deploy(account_id, sys_status: CommandResult):
         )
 
         for cmd in commands:
-            await rw_terraform_command(cmd, output_file, account_id)
+            await rw_terraform_command(cmd, output_file, account_id, sys_status)
 
         stop_event.set()
         upload_task.cancel()

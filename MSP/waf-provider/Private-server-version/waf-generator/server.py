@@ -10,11 +10,9 @@ from typing import Dict, Any
 from CommandResult import CommandResult
 # import logger
 
-task_statuses: Dict[str, Any] = {}
-status = None
+user_command_results = dict()
 server = Quart(__name__)
 deploy_result, status_code = -1, -1
-sys_status = CommandResult() # create a new object of CommandResult
 
 ip_regex = r'^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$'
 rules_data = None
@@ -22,37 +20,16 @@ blocked_ips = []
 reasons = []
 last_updated = datetime.now().strftime('%Y-%m-%dT%H:%M:%SZ')
 
-# class SystemStatus:
-#     def __init__(self):
-#         self.status = None # success or error
-#         self.message = ""
-#         self.last_updated = last_updated
-#     def update_status(self, status, message):
-#         self.status = status
-#         self.message = message
-#     def get_latest_status(self):
-#         return self.status
-    
-# sys_status = SystemStatus()
 
-# A callback function that updates the task status when the deployment completes or fails.
-# def update_status(future: asyncio.Future) -> None:
-#     global task_statuses
-#     global sys_status
-#     try:
-#         print("all the result:", future.result())
-#         sys_status.update_status("success", future.result()[len(future.result()) - 1])
-#         result = future.result()[len(future.result()) - 1]
-#         task_statuses = {"message": result, "status": "success"}
-#     except Exception as e:
-#         task_statuses = {"error message": str(e), "status": "error"}
-#         sys_status.update_status("error", str(e))
+def handle_customer_request(customer_id):
+    global user_command_results
+    result = CommandResult(customer_id)
+    # Process the command...
+    result.set_output(f"Command processed for customer {customer_id}")
+    result.set_result("Success")
+    user_command_results[customer_id] = result
+    return result
 
-# Retrieves the current status of a deployment task.
-async def check_deployment_status():
-    global task_statuses
-    print("checking deployment status", task_statuses)
-    return task_statuses
 
 def match_regex(string, pattern):
     return bool(re.match(pattern, string))
@@ -96,11 +73,10 @@ def update_rules():
 # GET, POST, DELETE(use method POST)
 @server.route('/v1/waf/rules', methods=['GET', 'POST'])
 async def rule_ip():
+    global user_command_results
     global last_updated
     global rules_data
-    global task_statuses
-    global sys_status
-    
+    global task_statuses    
 
     new_data = None
     task_statuses = {"data": "None", "status": "inprocess"} # initialize task status
@@ -116,6 +92,7 @@ async def rule_ip():
         if new_data:
             try:
                 rules_data, user_id = terraform_generator.generate_terraform(new_data)
+                sys_status = handle_customer_request(user_id)
                 directory = f"/home/ec2-user/customers/{user_id}"
                 if not os.path.exists(directory):
                     os.makedirs(directory)
@@ -127,36 +104,41 @@ async def rule_ip():
                 await s3_handler.upload_to_s3_with_content_async("kg-for-test", f"user_data/{user_id}", "main.tf", rules_data)
                 
                 task = asyncio.create_task(terraform_deploy(user_id, sys_status))
-                # task.add_done_callback(lambda t: update_status(t))
 
                 return jsonify({"message": "server got data", "status": "success"}), 200
-                # return jsonify(deploy_result), status_code
             except Exception as e:
                 return jsonify({"message": "Error in processing", "error": str(e), "status": "error"}), 416
     elif request.method == 'GET':
         return jsonify({"data": rules_data})
 
-@server.route('/v1/waf/rules/response', methods=['GET'])
+@server.route('/v1/waf/rules/response', methods=['GET','POST'])
 async def send_response():
-    global sys_status
+    # global sys_status
+    global user_command_results
+    data = await request.get_json()
+    user_id = data.get('user_id')
+    
+    if not user_id:
+        return jsonify({
+            "success": False,
+            "message": "Invalid or missing user_id",
+            "data": None,
+        }), 400
+
     try:
-        status = await check_deployment_status()
-        print(status)
-        print(type(status))
-        if status.get("status") == "success" or status.get("status") == "inprocess":
-            return jsonify({
-                "success": True,
-                "message": "Status retrieved successfully",
-                "data": status,
-                "system_status": sys_status.get_output()
-            }), 200
-        else:
-            return jsonify({
-                "success": True,
-                "message": "Status retrieved successfully",
-                "data": status,
-                "system_status": sys_status.get_output()
-            }), 400
+        sys_status = user_command_results[user_id]
+    except KeyError:
+        return jsonify({
+            "success": False,
+            "message": "User not found",
+            "data": None,
+        }), 400
+    try:
+        return jsonify({
+            "success": True,
+            "message": "Status retrieved successfully",
+            "system_status": sys_status.get_output()
+        }), 200
     except Exception as e:
         return jsonify({
             "success": False,

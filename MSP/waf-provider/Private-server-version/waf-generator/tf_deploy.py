@@ -17,6 +17,7 @@ async def rw_terraform_command(cmd, output_file, account_id, system_status: Comm
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.STDOUT
     )
+    curren_path = os.getcwd()
     while True:
         line = await process.stdout.readline()
         if not line:
@@ -26,7 +27,12 @@ async def rw_terraform_command(cmd, output_file, account_id, system_status: Comm
     
         with open(output_file, 'a') as f:
             filtered_line = filter_terraform_output(line)
-            system_status.set_output(filtered_line)
+            # print("===================")
+            # print("filtered_line:", filtered_line)
+            system_status.set_output(line)
+            print("system_status:", system_status.get_output())
+            # print("===================")
+            print(f"system status output is set")
             f.write(filtered_line + '\n')
             f.flush()
             print(f"[Account {account_id}] {line}", flush=True)
@@ -35,7 +41,7 @@ async def rw_terraform_command(cmd, output_file, account_id, system_status: Comm
         if process.returncode != 0:
             await asyncio.sleep(10)
             raise subprocess.CalledProcessError(process.returncode, cmd, '\n'.join(output))
-        return '\n'.join(output)
+    return '\n'.join(output)
     
 async def destroy_resources_in_workspace(terraform_dir, workspace_name, output_file, account_id, system_status: CommandResult):
     try:
@@ -75,7 +81,7 @@ async def delete_workspace(terraform_dir, workspace_name, output_file, account_i
             account_id,
             system_status
         )
-        destroy_success = await destroy_resources_in_workspace(terraform_dir, workspace_name, output_file, account_id)
+        destroy_success = await destroy_resources_in_workspace(terraform_dir, workspace_name, output_file, account_id, system_status)
         if not destroy_success:
             print("Failed to destroy resources in workspace. Proceeding with deletion anyway.")
         
@@ -102,6 +108,7 @@ async def delete_workspace(terraform_dir, workspace_name, output_file, account_i
 # ensure whether the workspace exist 
 async def ensure_workspace(terraform_dir, workspace_name, output_file, account_id, system_status: CommandResult):
     try:
+        os.chdir(terraform_dir)
         list_output = await rw_terraform_command(
             ["terraform", "-chdir=" + terraform_dir, "workspace", "list"],
             output_file,
@@ -148,12 +155,12 @@ async def terraform_deploy(account_id, sys_status: CommandResult):
         if not os.path.exists(os.path.join(terraform_dir, 'main.tf')):
             raise FileNotFoundError(f"main.tf not found in: {terraform_dir}")
         try:
-            if await ensure_workspace(terraform_dir, workspace_name, output_file, account_id, sys_status):
+            
+            if not await ensure_workspace(terraform_dir, workspace_name, output_file, account_id, sys_status):
+                await create_new_workspace(terraform_dir, workspace_name, output_file, account_id, sys_status)  
+            else:
                 await delete_workspace(terraform_dir, workspace_name, output_file, account_id, sys_status)
-            try:
-                await create_new_workspace(terraform_dir, workspace_name, output_file, account_id, sys_status)
-            except subprocess.CalledProcessError as e:
-                print(f"Error for creating new workspace: {e}")
+                await create_new_workspace(terraform_dir, workspace_name, output_file, account_id, sys_status)  
 
         except subprocess.CalledProcessError as e:
             print(f"Error for workspace preprocessing: {e}")

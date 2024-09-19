@@ -15,6 +15,7 @@ class CommandResult:
         self._customer_id = customer_id
         self._future = asyncio.Future() # future object
         self._output = ""
+        self._alive = True
 
     @property
     def customer_id(self):
@@ -36,7 +37,8 @@ class CommandResult:
             self._future.set_result(result)
     
     def set_output(self, output):
-        self._output = output
+        if output != None:
+            self._output = output
 
     def get_output(self):
         return self._output
@@ -45,4 +47,7 @@ class CommandResult:
         if self._future is None:
             raise RuntimeError("No command has been run yet")
         return await self._future
+    
+    def set_death(self):
+        self._alive = False
         

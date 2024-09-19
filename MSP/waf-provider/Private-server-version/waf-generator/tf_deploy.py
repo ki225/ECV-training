@@ -27,13 +27,10 @@ async def rw_terraform_command(cmd, output_file, account_id, system_status: Comm
     
         with open(output_file, 'a') as f:
             filtered_line = filter_terraform_output(line)
+            system_status.set_output(filtered_line)
+            print("\ninput is",line,"\nfiltered_line:", filtered_line)
             # print("===================")
-            # print("filtered_line:", filtered_line)
-            system_status.set_output(line)
-            print("system_status:", system_status.get_output())
-            # print("===================")
-            print(f"system status output is set")
-            f.write(filtered_line + '\n')
+            f.write(f"{filtered_line}\n")
             f.flush()
             print(f"[Account {account_id}] {line}", flush=True)
 
@@ -195,6 +192,7 @@ async def terraform_deploy(account_id, sys_status: CommandResult):
         except asyncio.CancelledError:
             pass
         print(f"Terraform apply completed successfully for account {account_id} in workspace: {workspace_name}")
+        sys_status.set_death()
         return {
             "status": "success",
             "data": {

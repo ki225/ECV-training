@@ -1,5 +1,6 @@
 class stopEvent:
     def __init__(self):
+        
         self.stop_event = False
     # Generate stopped signal
     def set(self):

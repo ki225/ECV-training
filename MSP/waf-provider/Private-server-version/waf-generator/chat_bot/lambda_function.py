@@ -12,10 +12,7 @@ fixed_responses = {
 
 
 def lambda_handler(event, context):
-    body = json.loads(event['body']) if isinstance(event.get('body'), str) else event.get('body', {})
-    
-    # Extract the input
-    user_input = body.get('input', '')
+    user_input = event['input']
 
     if user_input in fixed_responses:
         response = fixed_responses[user_input]

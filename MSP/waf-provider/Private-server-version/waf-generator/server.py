@@ -109,6 +109,7 @@ async def rule_ip():
             except Exception as e:
                 return jsonify({"message": "Error in processing", "error": str(e), "status": "error"}), 416
     elif request.method == 'GET':
+        print("rules_data", rules_data)
         return jsonify({"data": rules_data})
 
 @server.route('/v1/waf/rules/response', methods=['GET','POST'])
@@ -116,6 +117,7 @@ async def send_response():
     # global sys_status
     global user_command_results
     data = await request.get_json()
+
     user_id = data.get('user_id')
     
     if not user_id:

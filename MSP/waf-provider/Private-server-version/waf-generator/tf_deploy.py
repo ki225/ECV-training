@@ -28,8 +28,6 @@ async def rw_terraform_command(cmd, output_file, account_id, system_status: Comm
         with open(output_file, 'a') as f:
             filtered_line = filter_terraform_output(line)
             system_status.set_output(filtered_line)
-            print("\ninput is",line,"\nfiltered_line:", filtered_line)
-            # print("===================")
             f.write(f"{filtered_line}\n")
             f.flush()
             print(f"[Account {account_id}] {line}", flush=True)

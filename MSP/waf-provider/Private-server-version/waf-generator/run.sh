@@ -6,7 +6,6 @@ pip3 install pydantic
 pip3 install requests
 pip3 install boto3
 pip3 install botocore
-pip3 install "flask[async]"
 pip3 install uvicorn
 pip3 install asgiref
 pip3 install hypercorn

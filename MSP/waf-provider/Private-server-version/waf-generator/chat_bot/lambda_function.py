@@ -23,7 +23,8 @@ def lambda_handler(event, context):
             results = searchCVE(params['cve_id'])
             # results = search_cve(**params)
             # parsed_results = parse_cve_results(results)
-            response = results
+            response = generate_response_from_openai(user_input, "professionalism", results)
+            
         except Exception as e:
             return {
             "statusCode": 500,
@@ -34,7 +35,7 @@ def lambda_handler(event, context):
         }
     else:
         try:
-            response = generate_response_from_openai(user_input)
+            response = generate_response_from_openai(user_input, "professionalism")
         except Exception as e:
             response = f"An error occurred while processing your request: {str(e)}"
     

@@ -301,6 +301,42 @@ resource "aws_api_gateway_resource" "rules" {
   depends_on = [ aws_api_gateway_resource.waf ]
 }
 
+resource "aws_api_gateway_resource" "response" {
+  rest_api_id = aws_api_gateway_rest_api.api.id
+  parent_id   = aws_api_gateway_resource.rules.id
+  path_part   = "response"
+  depends_on = [ aws_api_gateway_resource.rules ]
+}
+
+# ------------------------------------- response  ---------------------------------
+resource "aws_api_gateway_method" "post_response" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.response.id
+  http_method   = "POST"
+  authorization = "NONE"
+  depends_on = [ aws_api_gateway_resource.response ]
+}
+
+resource "aws_api_gateway_method" "cors_options-response" {
+  rest_api_id   = aws_api_gateway_rest_api.api.id
+  resource_id   = aws_api_gateway_resource.response.id
+  http_method   = "OPTIONS"
+  authorization = "NONE"
+  depends_on = [ aws_api_gateway_resource.response ]
+}
+
+resource "aws_api_gateway_integration" "post_response_integration" {
+  rest_api_id             = aws_api_gateway_rest_api.api.id
+  resource_id             = aws_api_gateway_resource.response.id
+  http_method             = aws_api_gateway_method.post_response.http_method
+  integration_http_method = "POST"
+  type                     = "HTTP"
+  uri                      = "http://${aws_lb.app_nlb.dns_name}:5000/v1/waf/rules/response"
+  connection_type         = "VPC_LINK"
+  connection_id           = aws_api_gateway_vpc_link.app_vpc_link.id
+  depends_on = [ aws_api_gateway_method.post_response ]
+}
+
 # ------------------------------------- ip-blocks ---------------------------------
 
 resource "aws_api_gateway_method" "get_ip_blocks" {

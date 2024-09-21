@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from cve_retriever import searchCVE
 from model import generate_response_from_openai
 from cve_query import parse_user_input, search_cve, parse_cve_results
 
@@ -19,20 +20,10 @@ def lambda_handler(event, context):
     elif 'cve' in user_input.lower():
         try:
             params = parse_user_input(user_input)
-            results = search_cve(**params)
-            parsed_results = parse_cve_results(results)
-            response = {
-                "statusCode": 200,
-                "body": json.dumps({
-                    "totalResults": results['totalResults'],
-                    "resultsPerPage": results['resultsPerPage'],
-                    "startIndex": results['startIndex'],
-                    "cveList": parsed_results
-                }),
-                "headers": {
-                    "Content-Type": "application/json"
-                }
-            }
+            results = searchCVE(params['cve_id'])
+            # results = search_cve(**params)
+            # parsed_results = parse_cve_results(results)
+            response = results
         except Exception as e:
             return {
             "statusCode": 500,

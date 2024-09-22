@@ -14,7 +14,7 @@ def generate_response_from_openai(messages, promptType, CVE_context=None):
         openai_api_version="2024-02-01",
         temperature=0
    )
-   if CVE_context:
+   if promptType == "cve":
       SUMMARIZE_PROMPT = f"{prompt.prompt_retriever(promptType)} CVEinfo: {CVE_context} User: {messages}"
    else:
       SUMMARIZE_PROMPT = f"{prompt.prompt_retriever(promptType)} User: {messages}"

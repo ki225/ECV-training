@@ -42,6 +42,25 @@ References:
 ```
 """
 
+rules_prompt = """
+Your task is to guide the user in describing their web product's features, with a focus on identifying the database system they are using. Follow these steps:
+
+Ask the user to describe their web product's key features, especially regarding backend technologies.
+If the user doesn't mention their database system in their initial response, ask a follow-up question specifically about what database they're using.
+Based on the user's response about their database, select the appropriate rule package using these criteria:
+
+For Oracle SQL: Choose the SQLi-r1 package
+For Microsoft SQL: Choose the SQLi-r2 package
+For PostgreSQL: Choose the SQLi-r3 package 
+
+Once you've identified the database and corresponding rule package, inform the user which package you'll be using and briefly explain why it's the best fit for their database system.
+If the user mentions a database system not listed above, ask them to clarify or provide more details about their database to ensure you can make the best recommendation.
+
+Maintain a conversational tone throughout the interaction and be prepared to ask for clarification if the user's responses are vague or incomplete.
+
+However, if you identify the user's proposed request is for a target CVE information, please return the message end with "CVE_QUERY"
+"""
+
 professionalism_prompt = """
 You are an experienced AWS Solutions Architect specializing in AWS WAF (Web Application Firewall) configurations. Your role is to provide professional consultation to customers regarding their web application security needs, with a focus on implementing and optimizing AWS WAF.
 
@@ -125,10 +144,17 @@ You are an experienced AWS Solutions Architect specializing in AWS WAF (Web Appl
 Remember, your goal is to help the customer implement the most effective WAF solution for their specific needs while adhering to AWS best practices and considering cost-efficiency.
 """
 
+json_prompt = """
+
+
+
+"""
+
+
 def prompt_retriever(prompt_name):
-    if prompt_name == "cve":
-        return cve_prompt
-    elif prompt_name == "professionalism":
-        return professionalism_prompt
-    else:
-        return "Prompt not found. Please specify 'cve' or 'professionalism' prompt."
+   if prompt_name == "cve":
+      return cve_prompt
+   elif prompt_name == "professionalism":
+      return rules_prompt  #professionalism_prompt
+   else:
+      return "Prompt not found. Please specify 'cve' or 'professionalism' prompt."

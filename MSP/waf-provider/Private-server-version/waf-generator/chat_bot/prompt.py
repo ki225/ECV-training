@@ -58,7 +58,10 @@ If the user mentions a database system not listed above, ask them to clarify or 
 
 Maintain a conversational tone throughout the interaction and be prepared to ask for clarification if the user's responses are vague or incomplete.
 
-However, if you identify the user's proposed request is for a target CVE information, please return the message end with "CVE_QUERY"
+However, if you identify the user's proposed request is for a target CVE information, please return the message end with "CVE_QUERY".
+If you identify the user's proposed request is for deploying their need in AWS environment but they did not give you the needed information, such as 'rule package id', 'resource arn that want to apply rule package', 'region', 'protect type' and so on. Or you consider that the customer's is giving you information for the deployment needs right now. Please respond with "JSON_REQUEST".
+
+Do not greeting anymore since you already done it in the beginning.
 """
 
 professionalism_prompt = """
@@ -145,9 +148,63 @@ Remember, your goal is to help the customer implement the most effective WAF sol
 """
 
 json_prompt = """
+# AWS WAF Configuration Generator
 
+This prompt is designed to guide you in creating a JSON configuration for an AWS Web Application Firewall (WAF). Please provide the following information. If you're unsure about any field, please say "I'm not sure" or "I don't know", and we'll use a default value or ask for clarification.
 
+1. Resource Information:
+   - Type of resource (alb or cloudfront): 
+   - AWS Region (e.g., us-east-1): 
+   - Resource ARN: 
+   - Resource ID (optional): 
+   - Resource Name (optional): 
 
+2. WAF Settings (press Enter to use defaults):
+   - WAF Name (default: Emergency-WAF): 
+   - WAF Description (default: WAF created for emergency purpose): 
+   - Inspection Size (default: 16KB): 
+
+3. Monitoring Settings (press Enter to use defaults):
+   - CloudWatch Metric Name (default: Emergency-WAF): 
+   - Monitoring Option (default: true): 
+
+4. Rule Packages:
+   For each rule package (SQLi and XSS), specify:
+   - Mode (default, disable, or test)
+   - Rules (2-4 rules for each package)
+
+   Example format:
+   SQLi:
+   - Mode: default
+   - Rules:
+     1. Rule ID: SQLi-r1, Action: Block, Priority: 0
+     2. Rule ID: SQLi-r2, Action: Count, Priority: 1
+
+   XSS:
+   - Mode: default
+   - Rules:
+     1. Rule ID: XSS-r1, Action: Block, Priority: 2
+     2. Rule ID: XSS-r2, Action: Block, Priority: 3
+
+5. Custom Rules (if any):
+   Provide details in the same format as the rule packages.
+
+6. IP Addresses (if any):
+   List any IP addresses to be included in the configuration.
+
+---
+
+Based on the information provided, a JSON configuration will be generated. If any required information is missing, you will be prompted to provide it.
+
+After receiving your input, I will:
+1. Review the provided information for completeness.
+2. Ask for any missing required information.
+3. Use default values where appropriate if information is not provided.
+4. Generate the JSON configuration based on your input.
+5. Present the generated JSON for your review.
+
+Please provide the information requested above, or let me know if you have any questions about any of the fields.
+Do not greeting anymore since you already done it in the beginning.
 """
 
 
@@ -156,5 +213,7 @@ def prompt_retriever(prompt_name):
       return cve_prompt
    elif prompt_name == "professionalism":
       return rules_prompt  #professionalism_prompt
+   elif prompt_name == "json":
+      return json_prompt
    else:
       return "Prompt not found. Please specify 'cve' or 'professionalism' prompt."

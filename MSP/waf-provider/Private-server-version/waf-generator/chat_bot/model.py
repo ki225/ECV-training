@@ -30,17 +30,25 @@ def generate_response_from_openai(messages, promptType, CVE_context=None, histor
          params = parse_user_input(messages)
          if params['cve_id']:
             results = str(searchCVE(params['cve_id']))
-            SUMMARIZE_PROMPT = f"{prompt.prompt_retriever(promptType)} CVEinfo: {CVE_context}\n\nConversation History:\n{history_str}\nUser: {messages}"
-            summarize_prompt = ChatPromptTemplate.from_template(SUMMARIZE_PROMPT)
-            parser = StrOutputParser()
-            chain = summarize_prompt | summarize_model | parser
-            response = chain.invoke({"input": summarize_prompt})
+            if results:
+               SUMMARIZE_PROMPT = f"{prompt.prompt_retriever(promptType)} CVEinfo: {results}\n\nConversation History:\n{history_str}\nUser: {messages}"
+               summarize_prompt = ChatPromptTemplate.from_template(SUMMARIZE_PROMPT)
+               parser = StrOutputParser()
+               chain = summarize_prompt | summarize_model | parser
+               response = chain.invoke({"input": summarize_prompt})
          else:
             response = response.replace("CVE_QUERY", "")
       except Exception as e:
          print(e)
-      
-
+   if "JSON_REQUEST" in response:
+      try:
+         SUMMARIZE_PROMPT = f"{prompt.prompt_retriever('json')}\n\nConversation History:\n{history_str}\nUser: {messages}"
+         summarize_prompt = ChatPromptTemplate.from_template(SUMMARIZE_PROMPT)
+         parser = StrOutputParser()
+         chain = summarize_prompt | summarize_model | parser
+         response = chain.invoke({"input": summarize_prompt})
+      except Exception as e:
+         print(e)
 
    # if promptType == "cve":
    #    SUMMARIZE_PROMPT = f"{prompt.prompt_retriever(promptType)} CVEinfo: {CVE_context}\n\nConversation History:\n{history_str}\nUser: {messages}"

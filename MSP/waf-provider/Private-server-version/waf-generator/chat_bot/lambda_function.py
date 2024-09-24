@@ -1,8 +1,7 @@
 import json
 from cve_retriever import searchCVE
 from model import generate_response_from_openai
-from cve_query import parse_user_input, search_cve, parse_cve_results
-from cve_retriever import searchCVE
+from cve_query import parse_user_input, searchCVE
 
 fixed_responses = {
     '1': "This is the response for input 1.",

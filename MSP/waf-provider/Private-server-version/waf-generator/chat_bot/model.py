@@ -1,8 +1,6 @@
 import os
 from langchain_openai import AzureChatOpenAI
-# Langchain prompting library
 from langchain_core.prompts import ChatPromptTemplate
-# Langchain utilities
 from langchain_core.output_parsers import StrOutputParser
 import prompt
 
@@ -22,5 +20,4 @@ def generate_response_from_openai(messages, promptType, CVE_context=None):
    parser = StrOutputParser()
    chain = summarize_prompt | summarize_model | parser
    response = chain.invoke({"input": summarize_prompt})
-   print(response)
    return response

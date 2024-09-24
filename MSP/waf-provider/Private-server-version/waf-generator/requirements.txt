@@ -1,0 +1,9 @@
+pydantic
+requests
+boto3
+botocore
+uvicorn
+asgiref
+hypercorn
+aioboto3
+quart

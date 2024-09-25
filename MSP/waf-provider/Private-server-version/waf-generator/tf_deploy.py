@@ -4,10 +4,11 @@ from datetime import datetime
 import asyncio
 from stopEvent import stopEvent
 from tf_output import filter_terraform_output
-from s3_handler import periodic_s3_upload
+from s3_handler import periodic_s3_upload, S3Handler
 from CommandResult import CommandResult
 
 stop_event = stopEvent()
+s3 = S3Handler()
 
 # run the terraform command and write into file
 async def rw_terraform_command(cmd, output_file, account_id, system_status: CommandResult):
@@ -177,7 +178,7 @@ async def terraform_deploy(account_id, sys_status: CommandResult):
 
         global stop_event
         upload_task = asyncio.create_task(
-            periodic_s3_upload(terraform_dir, output_file, bucket_name, s3_key, stop_event)
+            s3.periodic_s3_upload(terraform_dir, output_file, bucket_name, s3_key, stop_event)
         )
 
         for cmd in commands:

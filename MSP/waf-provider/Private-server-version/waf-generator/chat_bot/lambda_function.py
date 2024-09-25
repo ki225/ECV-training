@@ -3,10 +3,12 @@ import os
 import re
 
 from model import generate_response_from_openai
-
-
 from rule_retriever import rule_retriever
 from ConversationHistoryDB import ConversationHistoryDB
+from cve_retriever import searchCVE
+from model import generate_response_from_openai
+from cve_query import parse_user_input, searchCVE
+
 
 fixed_responses = {
     '1': "This is the response for input 1.",
@@ -30,15 +32,6 @@ def lambda_handler(event, context):
             response = generate_response_from_openai(user_input, "professionalism", None, history)
         except Exception as e:
             response = f"An error occurred while processing your request: {str(e)}"
-    
-    # elif 'cve' in user_input.lower():
-    #     try:
-    #         params = parse_user_input(user_input)
-    #         results = str(searchCVE(params['cve_id']))
-    #         # response = rule_retriever(params['cve_id'])
-    #         # response = generate_response_from_openai(user_input, "cve", results)
-    #         response = generate_response_from_openai(user_input, "cve", results, history)
-
             
         except Exception as e:
             return {

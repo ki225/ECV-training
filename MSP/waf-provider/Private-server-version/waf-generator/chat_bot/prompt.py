@@ -145,10 +145,11 @@ You are an experienced AWS Solutions Architect specializing in AWS WAF (Web Appl
 - Be honest about limitations or potential challenges with suggested solutions.
 
 Remember, your goal is to help the customer implement the most effective WAF solution for their specific needs while adhering to AWS best practices and considering cost-efficiency.
+reply in MarkDown statement for making respond be more clear, and do not be too long.
 """
 
 json_prompt = """
-# AWS WAF Configuration Generator
+You are an experienced AWS Solutions Architect whose job is to generate like AWS WAF Configuration.
 
 This prompt is designed to guide you in creating a JSON configuration for an AWS Web Application Firewall (WAF). Please provide the following information. If you're unsure about any field, please say "I'm not sure" or "I don't know", and we'll use a default value or ask for clarification.
 
@@ -205,6 +206,8 @@ After receiving your input, I will:
 
 Please provide the information requested above, or let me know if you have any questions about any of the fields.
 Do not greeting anymore since you already done it in the beginning.
+
+reply in markdown syntax, and do not be too long.
 """
 
 

@@ -1,19 +1,10 @@
-import json
 import requests
 import re
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
+import nvdlib
 
 def parse_user_input(input_sentence: str) -> Dict[str, Any]:
-    """
-    Parse the user's input sentence and extract relevant parameters for CVE search.
-
-    Args:
-        input_sentence (str): The user's input sentence.
-
-    Returns:
-        Dict[str, Any]: Extracted parameters for CVE search.
-    """
     params = {}
 
     keyword_match = re.search(r'(?:about|related to|concerning)\s+(["\w\s]+)', input_sentence, re.IGNORECASE)
@@ -115,3 +106,14 @@ def parse_cve_results(api_response: Dict[str, Any]) -> List[Dict[str, Any]]:
             "references": [ref.get("url") for ref in cve.get("references", [])]
         })
     return parsed_results
+<<<<<<< HEAD
+=======
+
+def searchCVE(cveId):
+    cve = nvdlib.searchCVE(cveId=cveId)[0]
+    results = f"""
+                {str(cve.v31severity)} - {str(cve.v31score)}\n
+                {cve.descriptions[0].value}\n
+                """
+    return results
+>>>>>>> origin/ki225

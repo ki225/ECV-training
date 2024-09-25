@@ -4,8 +4,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.schema import HumanMessage, SystemMessage, AIMessage
 import prompt
-from cve_retriever import searchCVE
-from cve_query import parse_user_input, search_cve, parse_cve_results
+from cve_query import parse_user_input, searchCVE
 
 def generate_response_from_openai(messages, promptType, CVE_context=None, history=None):
    summarize_model = AzureChatOpenAI(
@@ -49,12 +48,4 @@ def generate_response_from_openai(messages, promptType, CVE_context=None, histor
          response = chain.invoke({"input": summarize_prompt})
       except Exception as e:
          print(e)
-
-   # if promptType == "cve":
-   #    SUMMARIZE_PROMPT = f"{prompt.prompt_retriever(promptType)} CVEinfo: {CVE_context}\n\nConversation History:\n{history_str}\nUser: {messages}"
-   # else:
-   #    SUMMARIZE_PROMPT = f"{prompt.prompt_retriever(promptType)}\n\nConversation History:\n{history_str}\nUser: {messages}"
-
-   
-   print(response)
    return response

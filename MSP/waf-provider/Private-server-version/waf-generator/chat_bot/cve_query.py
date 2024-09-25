@@ -106,8 +106,6 @@ def parse_cve_results(api_response: Dict[str, Any]) -> List[Dict[str, Any]]:
             "references": [ref.get("url") for ref in cve.get("references", [])]
         })
     return parsed_results
-<<<<<<< HEAD
-=======
 
 def searchCVE(cveId):
     cve = nvdlib.searchCVE(cveId=cveId)[0]
@@ -116,4 +114,3 @@ def searchCVE(cveId):
                 {cve.descriptions[0].value}\n
                 """
     return results
->>>>>>> origin/ki225

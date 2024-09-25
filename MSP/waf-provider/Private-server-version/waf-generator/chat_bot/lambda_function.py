@@ -3,12 +3,12 @@ import os
 import re
 
 from model import generate_response_from_openai
-from rule_retriever import rule_retriever
 from ConversationHistoryDB import ConversationHistoryDB
-from cve_retriever import searchCVE
 from model import generate_response_from_openai
-from cve_query import parse_user_input, searchCVE
 
+from aws_lambda_powertools import Logger, Tracer
+
+tracer = Tracer()
 
 fixed_responses = {
     '1': "This is the response for input 1.",
@@ -19,6 +19,7 @@ fixed_responses = {
 
 db = ConversationHistoryDB()
 
+@tracer.capture_lambda_handler 
 def lambda_handler(event, context):
     user_id = event.get('user_id', 'default_user')
     history = db.get_conversation_history(user_id)
@@ -29,14 +30,11 @@ def lambda_handler(event, context):
         response = fixed_responses[user_input]
     else:
         try:
-            response = generate_response_from_openai(user_input, "professionalism", None, history)
-        except Exception as e:
-            response = f"An error occurred while processing your request: {str(e)}"
-            
+            response = generate_response_from_openai(user_input, "professionalism", None, history)            
         except Exception as e:
             return {
             "statusCode": 500,
-            "body": json.dumps({"error": str(e),'response': "cannot get info"}),
+            "body": json.dumps({'response': str(e)}),
             "headers": {
                 "Content-Type": "application/json"
             }

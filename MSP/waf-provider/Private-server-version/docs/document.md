@@ -85,14 +85,41 @@ Overview
 We provide an intellegent auto-deployment system called "WAF Manager" to help both engineers and customers to save their time by reducing the WAF deploying time.
 
 
-
-
 Introduction
 ---
+During our internship at EcloudValley, we encountered a significant challenge in the realm of web application security: the complex and time-consuming process of setting up a Web Application Firewall (WAF). This task, critical for protecting web applications from various cyber threats, often proves to be a frustrating and resource-intensive endeavor for many organizations.
 
-During the internship in Ecloudvalley, we found that a task 
+The difficulties in WAF setup stem from several factors:
 
-In order to handle emergency web application security problem, we provide "WAF Manager" as a solution to reduce the total time for WAF deployment. 
+1.	Complex Configuration: WAF deployment requires navigating through intricate settings and options, demanding a deep understanding of both web security principles and the specific WAF platform being used.
+
+2.	 Rule Research and Design: Effective WAF protection necessitates extensive research into current threat landscapes and the careful design of rules to counter these threats. This process is both time-consuming and requires specialized knowledge.
+
+3.	Continuous Updates: The ever-evolving nature of cyber threats means that WAF rules and configurations need frequent updates, adding to the ongoing maintenance burden.
+
+4.	Resource Intensiveness: The combination of initial setup and ongoing management often requires dedicated personnel, which can strain resources, especially for smaller organizations.
+
+### Our vision
+Recognizing these challenges, we envisioned a solution that could revolutionize the way organizations approach WAF deployment and management. We wanted to create a tool that would:
+
+-	Simplify the WAF setup process, making it accessible to a broader range of users
+-	Reduce the time and resources required for effective WAF deployment
+-	Leverage cutting-edge AI technology to provide intelligent, context-aware security implementation
+-	Offer flexibility to cater to both novice users and experienced security professionals
+
+### Introducing WAF Manager
+To address these needs, we developed "WAF Manager" - an innovative solution designed to streamline and enhance the WAF deployment process. WAF Manager serves as a comprehensive platform that combines:
+
+1.	AI-Powered Assistance: Utilizing advanced natural language processing to guide users through WAF setup and provide intelligent rule suggestions.
+
+2.	Intuitive Interface: Offering both an AI-driven conversational mode and a structured manual mode to cater to different user preferences and expertise levels.
+
+3.	Time-Saving Automation: Implementing automated processes to handle repetitive tasks and accelerate the overall deployment timeline.
+
+4.	Adaptive Security: Keep pace with emerging threats and security best practices.
+
+### Key Objectives
+By addressing the complexities and inefficiencies in traditional WAF setup processes, WAF Manager stands as a powerful solution for organizations seeking to bolster their web application security posture efficiently and effectively.
 
 
 Team members
@@ -197,6 +224,17 @@ Cloud Infrastructure
 
 Front-end Development
 ---
+The front-end is built using Vue.js 3, offering two primary modes of interaction:
+1.	AI Mode: A conversational interface leveraging AI to assist users in WAF configuration.
+2.	Manual Mode: A structured form interface for direct control over WAF settings.
+
+Key features include:
+•	Responsive design for various devices
+•	Real-time updates and notifications
+•	Markdown rendering for AI responses
+•	Progress tracking for WAF deployment
+
+
 
 Back-end Systems
 ---

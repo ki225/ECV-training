@@ -10,31 +10,28 @@ from langchain_community.chat_message_histories import DynamoDBChatMessageHistor
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-from prompt import RULE_PROMPT, PROFESSIONALISM_PROMPT, CVE_PROMPT, JSON_GENERATOR_PROMPT
+from prompt import RULE_CHOICE_PROMPT, PROFESSIONALISM_PROMPT, CVE_PROMPT, JSON_GENERATOR_PROMPT, AI_PROMPT, WAF_DESCRIBE_PROMPT
+import boto3
 
+dynamodb = boto3.resource("dynamodb")
 
+# primary_key/partition_key is set "SessionId" as default
 def get_dynamodb_chat_history(session_id: str):
    return DynamoDBChatMessageHistory(
-      table_name="waf_conversation_history", 
-      session_id=session_id
+      table_name="session-test", 
+      session_id=session_id,
+      primary_key_name="session_id",
     )
 
 def create_historical_chain(chain, agent_type):
-   # if agent_type == 'summarize':
       return RunnableWithMessageHistory(
             chain,
             get_dynamodb_chat_history,
             input_messages_key="input", 
             history_messages_key="chat_history", # check input key "chat_history"
       )
-   # elif agent_type == 'json_generator':
-   #    ## here
-   #    return None
-   # elif agent_type == 'cve':
-   #    ## here
-   #    return None
 
-def process_messages(session_id: str, messages: str, agent_type: str = 'summarize', chain=None):
+def process_messages(session_id: str, messages: str, agent_type: str = 'summarize', chain=None, user_id="123"):
    config = {"configurable": {"session_id": session_id}} 
    historical_chain = create_historical_chain(chain, agent_type)
 
@@ -42,20 +39,18 @@ def process_messages(session_id: str, messages: str, agent_type: str = 'summariz
    history_messages = chat_history.messages
    chain_input = {
         "input": messages,
-        "chat_history": history_messages
+        "chat_history": history_messages,
+        "user_id": user_id
     }
 
    response = historical_chain.invoke(chain_input, config)
-   chat_history.add_user_message(messages)
-   chat_history.add_ai_message(response)
-   print(chat_history.messages)
     
    return response
 
 tracer = Tracer()
 
 @tracer.capture_method
-def generate_response_from_openai(messages, promptType, CVE_context=None, history=None):
+def generate_response_from_openai(messages, promptType, CVE_context=None):
    summarize_model = AzureChatOpenAI(
         azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
         azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
@@ -66,39 +61,23 @@ def generate_response_from_openai(messages, promptType, CVE_context=None, histor
    professionalism_prompt = ChatPromptTemplate.from_template(PROFESSIONALISM_PROMPT)
    parser = StrOutputParser()
    chain = professionalism_prompt | summarize_model | parser
-   session_id = 123 # for test
+   session_id = "456" # for test
    response = process_messages(session_id, messages, chain=chain)
 
+   prompt = None
    
-   # if "CVE_REQUEST" in response:
-   #    try:
-   #       params = parse_user_input(messages)
-   #       if params['cve_id']:
-   #          results = str(searchCVE(params['cve_id']))
-   #          if results:
-   #             SUMMARIZE_PROMPT = f"{prompt.prompt_retriever(promptType)} CVEinfo: {results}\n\nConversation History:\n{history_str}\nUser: {messages}"
-   #             summarize_prompt = ChatPromptTemplate.from_template(SUMMARIZE_PROMPT)
-   #             parser = StrOutputParser()
-   #             chain = summarize_prompt | summarize_model | parser
-   #             response = chain.invoke({"input": summarize_prompt})
-   #       else:
-   #          response = response.replace("CVE_QUERY", "")
-   #    except Exception as e:
-   #       print(e)
-   # if "JSON_REQUEST" in response:
-   #    try:
-   #       SUMMARIZE_PROMPT = f"{prompt.prompt_retriever('json')}\n\nConversation History:\n{history_str}\nUser: {messages}"
-   #       summarize_prompt = ChatPromptTemplate.from_template(SUMMARIZE_PROMPT)
-   #       parser = StrOutputParser()
-   #       chain = summarize_prompt | summarize_model | parser
-   #       response = chain.invoke({"input": summarize_prompt})
-   #    except Exception as e:
-   #       print(e)
+   if "RULE_PACKAGE_DEPLOY" in response:
+      prompt = ChatPromptTemplate.from_template(RULE_CHOICE_PROMPT) 
+   elif "WAF_DESCRIBE" in response:
+      prompt = ChatPromptTemplate.from_template(WAF_DESCRIBE_PROMPT) 
+   elif "CVE_QUERY" in response:
+      prompt = ChatPromptTemplate.from_template(CVE_PROMPT) 
+   elif "JSON_GENERATOR" in response:
+      prompt = ChatPromptTemplate.from_template(JSON_GENERATOR_PROMPT) 
 
-   # if "RULE_PACKAGE_DEPLOY" in response:
-   #    target_rule_package = response[response.find("RULE_PACKAGE_DEPLOY")+18:]
-   #    rule_json = other_rule_retriever(target_rule_package)
-   #    response = str(rule_json)
-   #    # response = response.replace("RULE_PACKAGE_DEPLOY", f"\n{rule_json}")
+   if prompt:
+      second_chain = prompt | summarize_model | parser
+      final_response = process_messages(session_id, response, chain=second_chain)
+      return final_response
    
    return response

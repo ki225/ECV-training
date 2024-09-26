@@ -33,12 +33,16 @@ def other_rule_retriever(rule_id):
         response = s3.get_object(Bucket=bucket_name, Key=object_key)  
         rules = response['Body'].read() 
         decode_str = rules.decode('utf-8')  
-        rules = json.loads(decode_str)   
+        rules = json.loads(decode_str)
+        rule_get = ""
         for rule in rules:
+            rule_get+=f"{rule}\n\n {rules}"
             if rule["Rule_Id"] == rule_id:
+                return 2222222
                 config_str = rule["Rule_Configuration"]
                 config_list = config_str.split("\\n")
                 return "\n".join(config_list)
+        return rule_get
     except Exception as e:
         print(f"An error occurred: {e}")
-        return None
+        return 333333

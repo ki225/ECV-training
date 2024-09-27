@@ -148,14 +148,13 @@ First, you have to check the package mentioned by user whether it is available o
 If the package is available, please check whether information for the aws resource that need to be protectedis retrieved from user. 
 - If not, please ask for clarification.
 
-Here are the explanation of each field:
+Here are the form for getting information from user. 
+Please fill the information you get from user into the following form:
 
 1. Resource Information:
    - Type of resource (alb or cloudfront): 
    - AWS Region (e.g., us-east-1): 
    - Resource ARN: 
-   - Resource ID (optional): 
-   - Resource Name (optional): 
 
 2. WAF Settings (press Enter to use defaults):
    - WAF Name (default: Emergency-WAF): 
@@ -165,7 +164,6 @@ Here are the explanation of each field:
 3. Monitoring Settings (press Enter to use defaults):
    - CloudWatch Metric Name (default: Emergency-WAF): 
    - Monitoring Option (default: true): 
-   
 
 
 Input: {input}
@@ -198,8 +196,8 @@ The json configuration should be in the following format:
          "Type": "", # alb, cloudfront, ...
          "Region": "", # us-east-1, ...
          "Resource_Arn": "", # arn...
-         "Resource_Id": "", # (blank)
-         "Resource_Name": "" # (blank)
+         "Resource_Id": "", # (should be "")
+         "Resource_Name": "" # (should be "")
       }},
       "Waf": {{
          "Name": "", # "Emergency-WAF" as default if user does not specify

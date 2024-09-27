@@ -343,6 +343,12 @@ class sqliRule(BaseModel):
     Action: Optional[Literal["Block", "Allow", "Count", "Captcha", "Challenge"]]
     Priority: int
 
+class cveRule(BaseModel):
+    Rule_Id: str
+    Chosen: bool
+    Action: Optional[Literal["Block", "Allow", "Count", "Captcha", "Challenge"]]
+    Priority: int
+
 class XSS_rule(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
     Set: List[xssRule]
@@ -351,9 +357,14 @@ class SQLi_rule(BaseModel):
     Mode: Optional[Literal["disable", "default", "test", "advanced"]]
     Set: List[sqliRule]
 
+class CVE_rule(BaseModel):
+    Mode: Optional[Literal["disable", "default", "test", "advanced"]]
+    Set: List[cveRule]
+
 class RulePackage(BaseModel):
     SQLi: Optional[SQLi_rule] = None
     XSS: Optional[XSS_rule] = None
+    CVE: Optional[CVE_rule] = None
 
 # ======================================= Created Rule (customized rules) =======================================
 class VisibilityConfig(BaseModel):
@@ -513,7 +524,7 @@ def generate_terraform(config: json) -> str:
     return terraform_config, user_id
 
 
-cate_dict = {"SQLi": "Set", "XSS": "Set"}
+cate_dict = {"SQLi": "Set", "XSS": "Set", "CVE": "Set"}
 def generate_rules(rules) -> str:
     all_rules = []
     for rule in rules.Rule_Created:

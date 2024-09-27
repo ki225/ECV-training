@@ -4,3 +4,6 @@
 /MSP/Building_DVWA_platform_by_using_AWS_ECS/terraform/terraform.tfstate.backup
 /MSP/Building_DVWA_platform_by_using_AWS_ECS/terraform/terraform.tfstate
 /MSP/Building_DVWA_platform_by_using_AWS_ECS/terraform/.terraform/
+/MSP/waf-provider/Private-server-version/waf-generator/cve_process/cve/
+/MSP/waf-provider/Private-server-version/waf-generator/opensearch/cve/
+/.vscode

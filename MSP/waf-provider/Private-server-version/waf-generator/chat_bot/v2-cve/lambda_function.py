@@ -16,8 +16,8 @@ fixed_responses = {
     '3': "This is the response for input 3.",
     '4': "This is the response for input 4.",
     'I want to build a waf on alb': "Ok, I get it. Can you please provide the ARN of your resource? This unique identifier is crucial for correctly configuring your WAF. You can find it in the AWS Console under your resource's details. Once you share the ARN, we can proceed with the specific WAF setup.",
-    'arn:aws:elasticloadbalancing:us-east-1:533267425888:loadbalancer/app/alb/a7576322d443f617': 
-        "Thank you. We can talk about what service you want to protect. Understanding your specific needs will help us tailor the WAF configuration. Are you looking to secure a website, API, or another type of application? Each service may require different WAF rules and settings for optimal protection.",
+    'arn:aws:elasticloadbalancing:us-east-1:533267425888:loadbalancer/app/alb/202d1cbeb597f90b': 
+        "Thank you. We can talk about what service you want to protect. Understanding your specific needs will help us tailor the WAF configuration. Are you looking to secure a website, API, service or another type of application? Each service may require different WAF rules and settings for optimal protection.",
     'mysql': "For MySQL you just mentioned, I recommend you to use sql-r3. This rule is specifically designed to protect against SQL injection attacks targeting MySQL databases.",
     'generate':"""{
   "Resource": {
@@ -91,10 +91,12 @@ fixed_responses = {
 }"""
 }
 
+# db = ConversationHistoryDB()
 
 @tracer.capture_lambda_handler 
 def lambda_handler(event, context):
     user_id = event.get('user_id', 'default_user')
+    # history = db.get_conversation_history(user_id)
 
     user_input = event['input']
 
@@ -112,6 +114,10 @@ def lambda_handler(event, context):
             }
         }
 
+    
+    # db.store_message(user_id, "user", user_input)
+    # db.store_message(user_id, "assistant", response)
+    
     return {
         'statusCode': 200,
         'body': json.dumps({'response': response})

@@ -145,8 +145,9 @@ First, you have to check the package mentioned by user whether it is available o
 - For Microsoft SQL: Choose the SQLi-r2 package
 - For MySQL: Choose the SQLi-r3 package 
 
-If the package is available, please check whether information for the aws resource that need to be protectedis retrieved from user. 
+Also, please check whether information for the aws resource that need to be protectedis retrieved from user. 
 - If not, please ask for clarification.
+- If yes, please put the information get from user into the following form.
 
 Here are the form for getting information from user. If you get matching information from user's response or history, please fill the information you get from user into the following form:
 

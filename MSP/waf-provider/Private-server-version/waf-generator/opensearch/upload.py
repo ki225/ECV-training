@@ -4,14 +4,14 @@ from typing import Dict, Any, List
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.document_loaders import JSONLoader
-from tqdm.auto import tqdm  # Changed this line
+from tqdm.auto import tqdm 
 import time
 from langchain.text_splitter import CharacterTextSplitter
 
 
 AZURE_OPENAI_EMBEDDING_KEY = "text-embedding-3-small"
-os.environ["AZURE_OPENAI_API_KEY"] = "aa399c19184d4704a059e787e1dd7c79"
-os.environ["AZURE_OPENAI_ENDPOINT"] = "https://intern-2024-h2.openai.azure.com/"
+os.environ["AZURE_OPENAI_API_KEY"] = ""
+os.environ["AZURE_OPENAI_ENDPOINT"] = ""
 
 # Set up Azure OpenAI embeddings
 embeddings = AzureOpenAIEmbeddings(
@@ -20,13 +20,13 @@ embeddings = AzureOpenAIEmbeddings(
 )
 
 # Set up OpenSearch client
-host = "search-kiki-waf-m-skwshybharinuz57ouxxv6xddy.us-east-1.es.amazonaws.com"  # OpenSearch cluster endpoint
+host = ""  # OpenSearch cluster endpoint
 region = "us-east-1"
 service = 'es'
 
 opensearch = OpenSearch(
     hosts=[{'host': host, 'port': 443}],
-    http_auth=("kiki-waf-m", "1qaz2wsx#EDC"),
+    http_auth=("", ""),
     use_ssl=True,
     verify_certs=True,
     connection_class=RequestsHttpConnection,
@@ -37,7 +37,6 @@ opensearch = OpenSearch(
 
 # Function to load HTML from S3, create embedding, and index in OpenSearch
 def process_file(key, documents, index_name):
-    # Split text (optional, depending on your needs)
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
     docs = text_splitter.split_documents(documents)
     
@@ -53,28 +52,37 @@ def process_file(key, documents, index_name):
         }
         opensearch.index(index=index_name, body=body)
 
+def dict_to_string(data):
+    return json.dumps(data, indent=2)
+
 def process_all_json_files(directory_path, index_name):
-    # Step 1: Open the directory and count the PDF files
     json_files = [f for f in os.listdir(directory_path) if f.endswith('.json')]
     total_files = len(json_files)
-    docs = json_files
-    
-    # Now process the files                
+    print(f"Total files found: {total_files}")
+
     with tqdm(total=total_files, desc="Processing JSON files") as pbar:
-        for doc in docs:
+        for doc in json_files:
             key = os.path.join(directory_path, doc)
-            tqdm.write(f"Loading file: {key}")  # This will print without disrupting the progress bar
-            loader = JSONLoader(key)
-            document = loader.load()
-            process_file(doc, document, index_name)
-            pbar.update(1)
-            time.sleep(0.1)  # 100ms delay
+            tqdm.write(f"Loading file: {key}")
+            try:
+                loader = JSONLoader(key, jq_schema=".", text_content=False)
+                documents = loader.load()
+                
+                # Convert each document's page_content (which is a dict) to a string
+                for document in documents:
+                    if isinstance(document.page_content, dict):
+                        document.page_content = dict_to_string(document.page_content)
+                
+                process_file(doc, documents, index_name)
+            except Exception as e:
+                tqdm.write(f"Error processing {key}: {str(e)}")
+            finally:
+                pbar.update(1)
 
 
 
 if __name__ == "__main__":
-    # Change directory to the location of this script
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    cve_folder = os.path.join(script_dir, "cve")
+    cve_folder = os.path.join(script_dir, "cve2")
     os.chdir(script_dir)
     process_all_json_files(cve_folder, "cve")

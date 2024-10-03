@@ -700,3 +700,96 @@ To-do
 - clean code
 - webhook manage several task status
 
+# 2024/9/18
+Tasks:
+- add lambda to connect OpenAI as assistant
+- use Api to get deployment process
+- clean code and fix bugs
+- ppt
+
+Learn
+- lambda layers 
+- OpenAI
+
+```
+[ERROR] Runtime.ImportModuleError: Unable to import module 'lambda_function': No module named 'pydantic_core._pydantic_core'
+Traceback (most recent call last):INIT_REPORT Init Duration: 165.44 ms    Phase: init    Status: error    Error Type: Runtime.Unknown
+[ERROR] Runtime.ImportModuleError: Unable to import module 'lambda_function': No module named 'pydantic_core._pydantic_core'
+Traceback (most recent call last):INIT_REPORT Init Duration: 2428.59 ms    Phase: invoke    Status: error    Error Type: Runtime.Unknown
+START RequestId: a46809e1-8e11-4177-a86d-2a605ccf1a30 Version: $LATEST
+Unknown application error occurred
+Runtime.Unknown
+END RequestId: a46809e1-8e11-4177-a86d-2a605ccf1a30
+REPORT RequestId: a46809e1-8e11-4177-a86d-2a605ccf1a30    Duration: 2469.43 ms    Billed Duration: 2470 ms    Memory Size: 128 MB    Max Memory Used: 14 MB
+```
+
+```
+{
+  "errorMessage": "Unable to import module 'lambda_function': urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'OpenSSL 1.0.2k-fips  26 Jan 2017'. See: https://github.com/urllib3/urllib3/issues/2168",
+  "errorType": "Runtime.ImportModuleError",
+  "stackTrace": []
+}
+```
+
+# 2024/9/20
+
+Tasks:
+- clean code and fix bugs
+- ppt
+
+# 2024/9/23
+Tasks:
+- make chat-bot read history
+  - DynamoDB
+  - IAM role should be attached to lambda
+- fix rendering bug
+  - API for lambda should use "post" method for showing on webpage 
+- improve prompt for asking information
+- ppt
+
+To-do
+- document
+- bedrock
+
+# 2024/9/24
+Tasks:
+- 1-on-1 meeting
+- documentation
+
+# 2024/9/25
+Tasks:
+- build bedrock
+- documentation
+- debug
+- runnable for chat history
+
+Learn
+- Langchain
+- RAG, embedding
+- bedrock
+
+To-do
+- fix LLM response error
+- bedrock
+
+
+# 2024/9/27
+Tasks:
+- modify the prompt
+- bedrock
+- SOW 
+- ppt
+- PoC
+- CVE regex finding
+
+Learn
+- temperature
+  - near 1 : 即興發揮炒飯
+  - near 0 : 照食譜做的炒飯
+  - The temperature is a parameter that controls the randomness of the LLM's output. A higher temperature will result in more creative and imaginative text, while a lower temperature will result in more accurate and factual text.
+
+# 2024/9/30
+Tasks:
+- ppt
+- presentation
+- fix prompt

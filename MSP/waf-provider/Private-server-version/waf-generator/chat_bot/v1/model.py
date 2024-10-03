@@ -73,7 +73,9 @@ def generate_response_from_openai(messages, promptType, CVE_context=None):
 
    prompt = None
    generate = False
+   package_id = None
    
+   # understand user's need for particular topic
    if "RULE_PACKAGE_DEPLOY" in response:
       prompt = ChatPromptTemplate.from_template(RULE_CHOICE_PROMPT) 
    elif "WAF_DESCRIBE" in response:
@@ -85,26 +87,22 @@ def generate_response_from_openai(messages, promptType, CVE_context=None):
    elif "JSON_OUTPUT" in response:
       prompt = ChatPromptTemplate.from_template(JSON_OUTPUT_PROMPT) 
       generate = True
+   elif "JSON_RESPONSE" in response:
+      return "Waf configuration setting complete."
 
+   # reply to user
    if prompt:
       second_chain = prompt | summarize_model | parser
       final_response = process_messages(session_id, response, chain=second_chain)
-      package_id = package_retriever(final_response)
       if generate:
+         package_id = package_retriever(final_response)
          if package_id is not None:
             config_prompt = ChatPromptTemplate.from_template(JSON_OUTPUT_PROMPT)
             config_chain = config_prompt | summarize_model | parser
             config_response = process_messages(session_id, response, chain=config_chain)
             return config_response
          else:
-            return final_response
-      elif package_id is not None:
-         config_prompt = ChatPromptTemplate.from_template(JSON_GENERATOR_PROMPT)
-         config_chain = config_prompt | summarize_model | parser
-         config_response = process_messages(session_id, response, chain=config_chain)
-         return config_response
-      
+            return final_response   
 
       return final_response
-   
    return response

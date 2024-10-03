@@ -4,14 +4,9 @@ from typing import Dict, Any, List
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_community.document_loaders import JSONLoader
-from tqdm.auto import tqdm 
+from tqdm.auto import tqdm  # Changed this line
 import time
 from langchain.text_splitter import CharacterTextSplitter
-
-
-AZURE_OPENAI_EMBEDDING_KEY = "text-embedding-3-small"
-os.environ["AZURE_OPENAI_API_KEY"] = ""
-os.environ["AZURE_OPENAI_ENDPOINT"] = ""
 
 # Set up Azure OpenAI embeddings
 embeddings = AzureOpenAIEmbeddings(
@@ -19,14 +14,9 @@ embeddings = AzureOpenAIEmbeddings(
     openai_api_version="2023-05-15",
 )
 
-# Set up OpenSearch client
-host = ""  # OpenSearch cluster endpoint
-region = "us-east-1"
-service = 'es'
-
 opensearch = OpenSearch(
     hosts=[{'host': host, 'port': 443}],
-    http_auth=("", ""),
+    http_auth=(NAME,PASSWORD),
     use_ssl=True,
     verify_certs=True,
     connection_class=RequestsHttpConnection,
@@ -37,6 +27,7 @@ opensearch = OpenSearch(
 
 # Function to load HTML from S3, create embedding, and index in OpenSearch
 def process_file(key, documents, index_name):
+    # Split text (optional, depending on your needs)
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
     docs = text_splitter.split_documents(documents)
     
@@ -56,10 +47,12 @@ def dict_to_string(data):
     return json.dumps(data, indent=2)
 
 def process_all_json_files(directory_path, index_name):
+    # Step 1: Open the directory and count the JSON files
     json_files = [f for f in os.listdir(directory_path) if f.endswith('.json')]
     total_files = len(json_files)
     print(f"Total files found: {total_files}")
 
+    # Step 2: Process each JSON file
     with tqdm(total=total_files, desc="Processing JSON files") as pbar:
         for doc in json_files:
             key = os.path.join(directory_path, doc)
@@ -82,6 +75,7 @@ def process_all_json_files(directory_path, index_name):
 
 
 if __name__ == "__main__":
+    # Change directory to the location of this script
     script_dir = os.path.dirname(os.path.abspath(__file__))
     cve_folder = os.path.join(script_dir, "cve2")
     os.chdir(script_dir)

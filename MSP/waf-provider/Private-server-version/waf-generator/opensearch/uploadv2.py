@@ -8,25 +8,17 @@ from langchain.docstore.document import Document
 from tqdm.auto import tqdm
 import time
 from langchain.text_splitter import CharacterTextSplitter
-
-AZURE_OPENAI_EMBEDDING_KEY = "text-embedding-3-small"
-os.environ["AZURE_OPENAI_API_KEY"] = ""
-os.environ["AZURE_OPENAI_ENDPOINT"] = ""
-
 # Set up Azure OpenAI embeddings
 embeddings = AzureOpenAIEmbeddings(
     azure_deployment=AZURE_OPENAI_EMBEDDING_KEY,
     openai_api_version="2023-05-15",
 )
 
-# OpenSearch client
-host = ""  # AWS OpenSearch cluster endpoint
-region = "us-east-1"
-service = 'es'
+
 
 opensearch = OpenSearch(
     hosts=[{'host': host, 'port': 443}],
-    http_auth=("OPENSEARCH_USERNAME", "PASSWORD"),
+    http_auth=(NAME, PASSWORD),
     use_ssl=True,
     verify_certs=True,
     connection_class=RequestsHttpConnection,
@@ -57,7 +49,9 @@ def process_file(key, documents, index_name):
         flattened_content = flatten_dict(content_dict)
         
         # Convert to a string representation
-        content_str = json.dumps(flattened_content)        
+        content_str = json.dumps(flattened_content)
+        
+        # Split the content
         texts = text_splitter.split_text(content_str)
         
         for text in texts:
@@ -87,7 +81,7 @@ def create_index(client, index_name):
             'properties': {
                 'filename': {'type': 'keyword'},
                 'content': {'type': 'text'},
-                'embedding': {'type': 'dense_vector', 'dims': 1536} 
+                'embedding': {'type': 'dense_vector', 'dims': 1536}  # Adjust dims if needed
             }
         }
     }
@@ -124,6 +118,7 @@ def process_all_json_files(directory_path, index_name):
             except Exception as e:
                 tqdm.write(f"Error processing {key}: {str(e)}")
                 continue
+
 
 if __name__ == "__main__":
     # Change directory to the location of this script

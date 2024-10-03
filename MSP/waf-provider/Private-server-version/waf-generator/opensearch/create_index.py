@@ -1,11 +1,5 @@
 from opensearchpy import OpenSearch, RequestsHttpConnection
 
-# Set up OpenSearch client
-host = "" # OpenSearch cluster endpoint
-region = 'us-east-1' 
-service = 'es'
-auth = ("", "")
-
 opensearch = OpenSearch(
     hosts = [{'host': host, 'port': 443}],
     http_auth = auth,

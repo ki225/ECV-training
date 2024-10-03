@@ -38,11 +38,9 @@ def other_rule_retriever(rule_id):
         for rule in rules:
             rule_get+=f"{rule}\n\n {rules}"
             if rule["Rule_Id"] == rule_id:
-                return 2222222
                 config_str = rule["Rule_Configuration"]
                 config_list = config_str.split("\\n")
                 return "\n".join(config_list)
         return rule_get
     except Exception as e:
         print(f"An error occurred: {e}")
-        return 333333

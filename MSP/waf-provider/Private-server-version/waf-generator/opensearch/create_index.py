@@ -1,10 +1,10 @@
 from opensearchpy import OpenSearch, RequestsHttpConnection
 
 # Set up OpenSearch client
-host = "search-kiki-waf-m-skwshybharinuz57ouxxv6xddy.us-east-1.es.amazonaws.com" # OpenSearch cluster endpoint
-region = 'us-east-1'  # e.g., us-west-2
+host = "" # OpenSearch cluster endpoint
+region = 'us-east-1' 
 service = 'es'
-auth = ("waf-master", "1qaz2wsx#EDC")
+auth = ("", "")
 
 opensearch = OpenSearch(
     hosts = [{'host': host, 'port': 443}],

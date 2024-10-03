@@ -12,6 +12,7 @@ from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from prompt import RULE_CHOICE_PROMPT, PROFESSIONALISM_PROMPT, CVE_PROMPT, JSON_GENERATOR_PROMPT, AI_PROMPT, WAF_DESCRIBE_PROMPT
 import boto3
+from langchain_aws import ChatBedrock
 
 dynamodb = boto3.resource("dynamodb")
 
@@ -37,6 +38,8 @@ def process_messages(session_id: str, messages: str, agent_type: str = 'summariz
 
    chat_history = get_dynamodb_chat_history(session_id)
    history_messages = chat_history.messages
+   print("chat histiry", history_messages)
+   
    chain_input = {
         "input": messages,
         "chat_history": history_messages,
@@ -47,21 +50,27 @@ def process_messages(session_id: str, messages: str, agent_type: str = 'summariz
     
    return response
 
+def package_retriever(input_string):
+   if "RULE_PACKAGE_DEPLOY" in input_string:
+      rule_package_name = input_string.split("RULE_PACKAGE_DEPLOY")[1].strip()
+      return rule_package_name
+   return None
+      
+
 tracer = Tracer()
 
 @tracer.capture_method
 def generate_response_from_openai(messages, promptType, CVE_context=None):
-   summarize_model = AzureChatOpenAI(
-        azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-        azure_deployment=os.environ.get("AZURE_OPENAI_DEPLOYMENT"),
-        openai_api_version="2024-02-01",
-        temperature=0
+   summarize_model = ChatBedrock(
+      model_id="anthropic.claude-3-haiku-20240307-v1:0",
+      model_kwargs=dict(temperature=0.3), 
+      region_name = "us-east-1",
    )
 
    professionalism_prompt = ChatPromptTemplate.from_template(PROFESSIONALISM_PROMPT)
    parser = StrOutputParser()
    chain = professionalism_prompt | summarize_model | parser
-   session_id = "456" # for test
+   session_id = "3" # for test
    response = process_messages(session_id, messages, chain=chain)
 
    prompt = None
@@ -74,10 +83,21 @@ def generate_response_from_openai(messages, promptType, CVE_context=None):
       prompt = ChatPromptTemplate.from_template(CVE_PROMPT) 
    elif "JSON_GENERATOR" in response:
       prompt = ChatPromptTemplate.from_template(JSON_GENERATOR_PROMPT) 
+      
+   print("prompt:", prompt)
+   print("response:", response)
 
    if prompt:
       second_chain = prompt | summarize_model | parser
       final_response = process_messages(session_id, response, chain=second_chain)
+      print("final response:", final_response)
+      package_id = package_retriever(final_response)
+      if package_id is not None:
+         config_prompt = ChatPromptTemplate.from_template(JSON_GENERATOR_PROMPT)
+         config_chain = config_prompt | summarize_model | parser
+         config_response = process_messages(session_id, response, chain=config_chain)
+         return config_response
+
       return final_response
    
    return response

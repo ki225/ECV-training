@@ -1,7 +1,0 @@
-Langchain-AWS
-Langchain-OpenAI
-Langchain-Community
-OpenSearch
-OpenAI
-Anthropic
-Unstructured

@@ -1,6 +1,0 @@
-langchain
-langchain-openai
-openai
-langchain-core
-nvdlib
-langchain_community

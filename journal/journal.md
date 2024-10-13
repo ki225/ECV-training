@@ -534,3 +534,262 @@ Learn
 - WSGI
     - propose: make execute concurrently
     - Gunicorn
+
+# 2024/9/9
+
+Tasks:
+- modify the service terraform file
+- adding api gateway and lambda function
+- upgrade the ec2 level
+- debug and solve the tf workspace conflict problem
+- modify the json/pydantic format setting
+- add python file for filtering the console output from different account and the status content for rendering front-end
+
+To-do
+- fix the bug and let the modified content send to s3 bucket
+- add model into our service
+
+# 2024/9/11
+Tasks:
+- build asynchronous and concurrency server with quart and hypercorn
+- fix bugs
+
+Learn
+- quart
+- hypercorn
+
+To-do
+- fix "Failed to create workspace"
+- possible way1: code for validate whether customer's account have one
+- possible way 2: use terraform show to get output value for waf 
+- because the terraform cannot show the status successfully
+- fix "terraform workspace deletion & creation "
+
+
+Error
+```
+INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+INFO:     Started parent process [4539]
+INFO:     Started server process [4544]
+INFO:     Waiting for application startup.
+INFO:     ASGI 'lifespan' protocol appears unsupported.
+INFO:     Application startup complete.
+INFO:     Started server process [4543]
+INFO:     Waiting for application startup.
+INFO:     ASGI 'lifespan' protocol appears unsupported.
+INFO:     Application startup complete.
+INFO:     Started server process [4542]
+INFO:     Waiting for application startup.
+INFO:     ASGI 'lifespan' protocol appears unsupported.
+INFO:     Application startup complete.
+INFO:     Started server process [4541]
+INFO:     Waiting for application startup.
+INFO:     ASGI 'lifespan' protocol appears unsupported.
+INFO:     Application startup complete.
+
+```
+https://stackoverflow.com/questions/64512286/asgi-lifespan-protocol-appears-unsupported
+
+```
+myenv) [root@ip-10-0-3-125 ec2-user]# uvicorn server:asgi_app --host 0.0.0.0 --port 5000 --workers 4 --lifespan on
+INFO:     Uvicorn running on http://0.0.0.0:5000 (Press CTRL+C to quit)
+INFO:     Started parent process [4555]
+INFO:     Started server process [4559]
+INFO:     Started server process [4560]
+INFO:     Waiting for application startup.
+INFO:     Waiting for application startup.
+ERROR:    Exception in 'lifespan' protocol
+Traceback (most recent call last):
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/uvicorn/lifespan/on.py", line 86, in main
+    await app(scope, self.receive, self.send)
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/uvicorn/middleware/proxy_headers.py", line 70, in __call__
+    return await self.app(scope, receive, send)
+```
+
+[Flask : RuntimeError: Working outside of request context](https://stackoverflow.com/questions/68710021/flask-runtimeerror-working-outside-of-request-context)
+
+
+```
+Traceback (most recent call last):
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/quart/app.py", line 1403, in handle_request
+    return await self.full_dispatch_request(request_context)
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/quart/app.py", line 1441, in full_dispatch_request
+    result = await self.handle_user_exception(error)
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/quart/app.py", line 1029, in handle_user_exception
+    raise error
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/quart/app.py", line 1439, in full_dispatch_request
+    result = await self.dispatch_request(request_context)
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/quart/app.py", line 1535, in dispatch_request
+    return await self.ensure_async(handler)(**request_.view_args)  # type: ignore
+  File "/home/ec2-user/server.py", line 70, in rule_ip
+    if request.method == 'POST':
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/werkzeug/local.py", line 318, in __get__
+    obj = instance._get_current_object()
+  File "/home/ec2-user/myenv/lib64/python3.8/site-packages/werkzeug/local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of request context.
+
+This typically means that you attempted to use functionality that needed
+an active HTTP request. Consult the documentation on testing for
+information about how to avoid this problem.
+```
+after I found this solution https://stackoverflow.com/questions/68710021/flask-runtimeerror-working-outside-of-request-context
+
+i change my code from
+
+```
+from flask import Flask, request, jsonify
+from quart import Quart, jsonify
+```
+to
+```
+from quart import Quart, request, jsonify
+```
+
+# 2024/9/13
+Tasks:
+- solve server timeout problem (504)
+- asynchronous return value
+- make js keep calling api for rendering instead of getting data from s3
+    - https://claude.ai/chat/431b81b3-86b4-4da8-80b6-4a134978b21f
+- fix bugs
+- add more api gw resources
+
+Learn
+- Future
+- asynchronous: await vs asyncio.create_task
+- webhook
+- gather
+    - description: uber & bus
+    - https://claude.ai/chat/ad3531e4-06cc-4c51-b233-dea4b1b0134c
+```
+async def function1(task_id, iterations):
+    print(f"Function 1 (Task ID: {task_id}) started")
+    for i in range(iterations):
+        print(f"Function 1 (Task ID: {task_id}) iteration {i+1}")
+        await asyncio.sleep(0.5)  # Simulating some work
+    print(f"Function 1 (Task ID: {task_id}) finished")
+    return f"Result from Function 1 (Task ID: {task_id})"
+
+async def function2(task_id, iterations):
+    print(f"Function 2 (Task ID: {task_id}) started")
+    for i in range(iterations):
+        print(f"Function 2 (Task ID: {task_id}) iteration {i+1}")
+        await asyncio.sleep(0.3)  # Simulating some work
+    print(f"Function 2 (Task ID: {task_id}) finished")
+    return f"Result from Function 2 (Task ID: {task_id})"
+
+async def main():
+    # Create two tasks with different functions, IDs, and iteration counts
+    task1 = asyncio.create_task(function1(1, 5))
+    task2 = asyncio.create_task(function2(2, 7))
+
+    # Wait for both tasks to complete and get their results
+    results = await asyncio.gather(task1, task2)
+
+    print("Both tasks have finished execution")
+    print("Results:", results)
+
+# Run the main coroutine
+asyncio.run(main())
+```
+
+
+To-do
+- PPT
+- clean code
+- webhook manage several task status
+
+# 2024/9/18
+Tasks:
+- add lambda to connect OpenAI as assistant
+- use Api to get deployment process
+- clean code and fix bugs
+- ppt
+
+Learn
+- lambda layers 
+- OpenAI
+
+```
+[ERROR] Runtime.ImportModuleError: Unable to import module 'lambda_function': No module named 'pydantic_core._pydantic_core'
+Traceback (most recent call last):INIT_REPORT Init Duration: 165.44 ms    Phase: init    Status: error    Error Type: Runtime.Unknown
+[ERROR] Runtime.ImportModuleError: Unable to import module 'lambda_function': No module named 'pydantic_core._pydantic_core'
+Traceback (most recent call last):INIT_REPORT Init Duration: 2428.59 ms    Phase: invoke    Status: error    Error Type: Runtime.Unknown
+START RequestId: a46809e1-8e11-4177-a86d-2a605ccf1a30 Version: $LATEST
+Unknown application error occurred
+Runtime.Unknown
+END RequestId: a46809e1-8e11-4177-a86d-2a605ccf1a30
+REPORT RequestId: a46809e1-8e11-4177-a86d-2a605ccf1a30    Duration: 2469.43 ms    Billed Duration: 2470 ms    Memory Size: 128 MB    Max Memory Used: 14 MB
+```
+
+```
+{
+  "errorMessage": "Unable to import module 'lambda_function': urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'OpenSSL 1.0.2k-fips  26 Jan 2017'. See: https://github.com/urllib3/urllib3/issues/2168",
+  "errorType": "Runtime.ImportModuleError",
+  "stackTrace": []
+}
+```
+
+# 2024/9/20
+
+Tasks:
+- clean code and fix bugs
+- ppt
+
+# 2024/9/23
+Tasks:
+- make chat-bot read history
+  - DynamoDB
+  - IAM role should be attached to lambda
+- fix rendering bug
+  - API for lambda should use "post" method for showing on webpage 
+- improve prompt for asking information
+- ppt
+
+To-do
+- document
+- bedrock
+
+# 2024/9/24
+Tasks:
+- 1-on-1 meeting
+- documentation
+
+# 2024/9/25
+Tasks:
+- build bedrock
+- documentation
+- debug
+- runnable for chat history
+
+Learn
+- Langchain
+- RAG, embedding
+- bedrock
+
+To-do
+- fix LLM response error
+- bedrock
+
+
+# 2024/9/27
+Tasks:
+- modify the prompt
+- bedrock
+- SOW 
+- ppt
+- PoC
+- CVE regex finding
+
+Learn
+- temperature
+  - near 1 : 即興發揮炒飯
+  - near 0 : 照食譜做的炒飯
+  - The temperature is a parameter that controls the randomness of the LLM's output. A higher temperature will result in more creative and imaginative text, while a lower temperature will result in more accurate and factual text.
+
+# 2024/9/30
+Tasks:
+- ppt
+- presentation
+- fix prompt

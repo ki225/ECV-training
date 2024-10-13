@@ -1,0 +1,8 @@
+langchain
+langchain-aws
+langchain-openai
+langchain-community
+opensearch-py
+requests
+jq
+tqdm
